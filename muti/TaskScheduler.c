@@ -21,6 +21,8 @@
 #include "derm_crc.h"
 #include "crc_check.h"
 #include "config.h"
+#define LAYER_NUM 8
+#define CQI_INDEX 15
 int *ServiceEN_tx;
 int *ServiceEN_rx;
 extern sem_t tx_signal;
@@ -55,11 +57,11 @@ void TaskScheduler_tx(void *arg){
 	int k = 0, t = 0;	
 	//seed = time(NULL);
 	srand(seed);
-	int LayerNum = 8;
+	int LayerNum = LAYER_NUM;
 	int *CQI_index = (int *) malloc(sizeof(int) * MaxBeam * packCache);
 	for(int i = 0; i < packCache; i++){
 		for(int j = 0; j < MaxBeam; j++){
-			CQI_index[i * MaxBeam + j] = 15;
+			CQI_index[i * MaxBeam + j] = CQI_INDEX;
 		}
 	}
 	int inter_freq = LayerNum;
@@ -563,7 +565,7 @@ void TaskScheduler_rx(void *arg){
 			 CFR_SB[i][j] = (lapack_complex_float *) malloc(sizeof(lapack_complex_float) * RxAntNum * MaxBeam * CarrierNum * SymbolNum / SBNum);
 		}
 	}
-	int LayerNum = 8;
+	int LayerNum = LAYER_NUM;
 	int inter_freq = LayerNum;
 	while(CarrierNum / SBNum % inter_freq != 0) inter_freq++;
 	struct chest_calsym_args_t *chest_calsym_args = (struct chest_calsym_args_t *) malloc(sizeof(struct chest_calsym_args_t) * SBNum * paraNum_rx);
@@ -970,8 +972,8 @@ void TaskScheduler_rx(void *arg){
 							//gettimeofday(&rx_begin, NULL);//--------------------rx
 							bitsNum = 0;
 							TIME = 0;	
-							printf("packNum %d\n",packNum);
-							printf("readyNum %d\n",readyNum);
+							//printf("packNum %d\n",packNum);
+							//printf("readyNum %d\n",readyNum);
 						}
 						gettimeofday(&rx_begin, NULL);//--------------------rx
 					}
