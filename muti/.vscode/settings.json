@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "cstdbool": "cpp",
+        "config.h": "c",
+        "cbsegm.h": "c"
+    }
+}
