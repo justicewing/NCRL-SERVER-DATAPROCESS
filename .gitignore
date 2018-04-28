@@ -11,3 +11,5 @@ muti/channel/sort_beam3.txt
 muti/channel/sort_r.txt
 muti/channel/wgni.txt
 muti/channel/wgnr.txt
+*.o
+*.o
