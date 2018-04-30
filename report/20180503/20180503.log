@@ -1,10 +1,12 @@
-This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017) (preloaded format=xelatex 2018.4.28)  28 APR 2018 16:54
+This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017) (preloaded format=xelatex 2018.4.30)  30 APR 2018 15:27
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**/media/sherlockhsu/CE44-9F6D/DataProcess(Server)/report/20180503/20180503
-(/media/sherlockhsu/CE44-9F6D/DataProcess(Server)/report/20180503/20180503.tex
+**/media/sherlockhsu/本地磁盘/GitHub/DataProcess-Server-/report/20180503/20180503
+
+(/media/sherlockhsu/本地磁盘/GitHub/DataProcess-Server-/report/20180503/20180503.te
+x
 LaTeX2e <2017-04-15>
 Babel <3.18> and hyphenation patterns for 84 language(s) loaded.
 (/usr/local/texlive/2017/texmf-dist/tex/latex/base/article.cls
@@ -1513,15 +1515,17 @@ File: result_server.png Graphic file (type bmp)
 ]
 File: frame_step1.pdf Graphic file (type pdf)
 <use frame_step1.pdf>
+File: frame_step2.pdf Graphic file (type pdf)
+<use frame_step2.pdf>
  [2]
-(./20180503.aux) ) 
+[3] (./20180503.aux) ) 
 Here is how much of TeX's memory you used:
- 23202 strings out of 493007
- 465991 string characters out of 6134605
+ 23206 strings out of 493007
+ 466086 string characters out of 6134605
  511062 words of memory out of 5000000
- 26951 multiletter control sequences out of 15000+600000
+ 26954 multiletter control sequences out of 15000+600000
  538046 words of font info for 76 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 57i,8n,74p,10520b,296s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 57i,8n,74p,10522b,296s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on 20180503.pdf (2 pages).
+Output written on 20180503.pdf (3 pages).
