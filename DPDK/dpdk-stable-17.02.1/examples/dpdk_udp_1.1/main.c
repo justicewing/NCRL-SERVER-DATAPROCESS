@@ -1084,33 +1084,31 @@ main(int argc, char **argv)
 		}
 	}
 
-/*
-	FILE *fp;
-	FILE *fpp;
-	struct rte_mbuf *m;				
-	m=rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
+	// FILE *fp;
+	// FILE *fpp;
+	// struct rte_mbuf *m;				
+	// m=rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 	
-	uint8_t * adcnt;
+	// uint8_t * adcnt;
 	
-	for(adcnt=(uint8_t*)m->buf_addr;adcnt<(uint8_t*)rte_pktmbuf_mtod(m,uint8_t*);adcnt++)
-		*adcnt=0xaa;
-	for(adcnt=rte_pktmbuf_mtod(m,uint8_t*);adcnt<rte_pktmbuf_mtod(m,uint8_t*)+m->data_len;adcnt++)
-		*adcnt=0xaa;
-	for(adcnt=rte_pktmbuf_mtod(m,uint8_t*)+m->data_len;adcnt<(uint8_t*)m->buf_addr+m->buf_len;adcnt++)
-		*adcnt=0xaa;
+	// for(adcnt=(uint8_t*)m->buf_addr;adcnt<(uint8_t*)rte_pktmbuf_mtod(m,uint8_t*);adcnt++)
+	// 	*adcnt=0xaa;
+	// for(adcnt=rte_pktmbuf_mtod(m,uint8_t*);adcnt<rte_pktmbuf_mtod(m,uint8_t*)+m->data_len;adcnt++)
+	// 	*adcnt=0xaa;
+	// for(adcnt=rte_pktmbuf_mtod(m,uint8_t*)+m->data_len;adcnt<(uint8_t*)m->buf_addr+m->buf_len;adcnt++)
+	// 	*adcnt=0xaa;
 	
-	fp=fopen("status","w");
-	struct rte_ring *r = rte_ring_create("MY_RING", 1024,rte_socket_id(), 0);
-	rte_ring_dump (fp, r);
-	rte_ring_mp_enqueue(r,m);
-	rte_ring_dump (fp, r);
-	rte_ring_mc_dequeue(r,e);
-	rte_ring_dump (fp, r);
-	fclose(fp);
-	print_mbuf_send(*(struct rte_mbuf **)e,fpp);
-	rte_pktmbuf_free(*(struct rte_mbuf **)e);
-	print_mbuf_send(*(struct rte_mbuf **)e,fpp);
-*/
+	// fp=fopen("status","w");
+	// struct rte_ring *r = rte_ring_create("MY_RING", 1024,rte_socket_id(), 0);
+	// rte_ring_dump (fp, r);
+	// rte_ring_mp_enqueue(r,m);
+	// rte_ring_dump (fp, r);
+	// rte_ring_mc_dequeue(r,e);
+	// rte_ring_dump (fp, r);
+	// fclose(fp);
+	// print_mbuf_send(*(struct rte_mbuf **)e,fpp);
+	// rte_pktmbuf_free(*(struct rte_mbuf **)e);
+	// print_mbuf_send(*(struct rte_mbuf **)e,fpp);
 	portid = 0;
 		
 	printf("Closing port %d...", portid);
