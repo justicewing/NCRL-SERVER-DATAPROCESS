@@ -77,7 +77,7 @@ int main()
 	omp_set_num_threads(1);
 	uint32_t seed = 1;
 	int layerNum = 8;
-	const int SNR_min = 15, SNR_max = 15;
+	const int SNR_min = 100, SNR_max = 100;
 	const int CQI_min = 15, CQI_max = 15;
 	const int loopNum = 10;
 	const int step = 1;
@@ -97,7 +97,7 @@ int main()
 	//int H_layer[8] = {66,67,68,65,69,64,70,63};//3
 	//int H_layer[8] = {63,64,65,66,67,68,69,70};
 
-	int H_Type = 1;		   //0：理想信道  1：估计信道
+	int H_Type = 0;		   //0：理想信道  1：估计信道
 	int ChEstType = 0;	 //0：LS  1：DCT
 	int LinkAdptState = 0; //0: 固定CQI 1：链路自适应
 	int inter_freq = layerNum;
@@ -767,9 +767,20 @@ int main()
 							}
 							else
 							{
-								CalSymb_mmse(H[t], y, RxAntNum, CarrierNum, layerNum, symbolNum, sigma, 1, 1, x_est, SymbVar, SINR_est);
+								CalSymb_mmse(H[t], y, RxAntNum, CarrierNum, layerNum, symbolNum, 0.001, 1, 1, x_est, SymbVar, SINR_est);
 							}
 						}
+						// for(int i=0;i<100;i++)
+						// {
+						// 	printf("%f+%fi  %f+%fi\n",H_est[RxAntNum * MaxBeam * CarrierNum * 3 + i].real,H_est[RxAntNum * MaxBeam * CarrierNum *3 + i].imag,H[t][i].real,H[t][i].imag);
+						// }
+						// 找非零项
+						// for(int i=0;i<RxAntNum * LayerNum * CarrierNum * 14;i++)
+						// {
+						// 	if(H_est[i].real!=0)
+						// 		printf("%d ",i/(RxAntNum * LayerNum * CarrierNum));
+						// }
+						
 						//for(int i = 0; i< 10; i++) printf("%d : %f+%fi  %f+%fi %e\n", i, x[i].real, x[i].imag, x_est[i].real,x_est[i].imag,SymbVar[i]);
 
 						gettimeofday(&sigdect_end, NULL); //______________________

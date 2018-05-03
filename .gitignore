@@ -12,3 +12,15 @@ muti/channel/sort_r.txt
 muti/channel/wgni.txt
 muti/channel/wgnr.txt
 *.o
+single/channel/H_imag.txt
+single/channel/H_imag2.txt
+single/channel/H_imag3.txt
+single/channel/H_real.txt
+single/channel/H_real2.txt
+single/channel/H_real3.txt
+single/channel/R_DCT_1200_140.txt
+single/channel/sort_beam2.txt
+single/channel/sort_beam3.txt
+single/channel/sort_r.txt
+single/channel/wgni.txt
+single/channel/wgnr.txt
