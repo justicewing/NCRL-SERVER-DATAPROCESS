@@ -1109,6 +1109,7 @@ main(int argc, char **argv)
 	// print_mbuf_send(*(struct rte_mbuf **)e,fpp);
 	// rte_pktmbuf_free(*(struct rte_mbuf **)e);
 	// print_mbuf_send(*(struct rte_mbuf **)e,fpp);
+	
 	portid = 0;
 		
 	printf("Closing port %d...", portid);

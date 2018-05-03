@@ -72,12 +72,12 @@
 \begin{figure}[H]
 	\centering
 	\includegraphics[width = .8\textwidth]{result_server.png}
-	\caption{单台服务器处理信息（flowNum=8，CQI=15）}
+	\caption{单台服务器(5Gmimo-server-2)处理信息(flowNum=8，CQI=15)}
 \end{figure}
 
 \subsection{不同CQI下的吞吐量}
 \begin{table}[H]
-\caption{不同CQI下的吞吐量(flowNum=8)}
+\caption{不同CQI下的Rx吞吐量(flowNum=8)}
 \centering
 \begin{tabular}{|l|l|l|l|}% 通过添加 | 来表示是否需要绘制竖线
 	\hline  % 在表格最上方绘制横线
@@ -117,6 +117,28 @@
 \end{table}
 
 %===========第二节=================
+\section{DPDK}
+\subsection{DPDK环境配置}
+官方文档 http://dpdk.org/doc/guides/linux\_gsg/index.html \\
+1. 缺少"numa.h"的问题\\
+安装libnuma-dev —— sudo apt install libnuma-dev\\
+2. Hugepages配置问题\\
+
+\subsection{DPDK样程}
+官方文档 http://dpdk.org/doc/guides/sample\_app\_ug/index.html \\
+\subsubsection{Hello World}
+1. 环境抽象层(EAL)初始化——rte\_eal\_init(argc, argv);\\
+2. 加载lcore——rte\_eal\_remote\_launch(lcore\_hello, NULL, lcore\_id);\\
+\subsubsection{Basic Forwarding Sample Application}
+1. 分配缓冲池mbufs空间——rte\_mempool\_create(...);\\
+2. 初始化端口——port\_init(portid, mbuf\_pool);\\
+\subsubsection{Network Layer 2 forwarding}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{frame_l2f.jpg}
+\end{figure}
+
+%===========第三节=================
 \section{DPDK添加方案}
 
 \subsection{单服务器数据处理流程}
@@ -126,27 +148,31 @@
 	\caption{单服务器数据处理流程}
 \end{figure}
 
-\subsection{添加DPDK后的处理流程}
+\subsection{UDP-DPDK处理流程}
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = \textwidth]{frame_step2.pdf}
-	\caption{添加DPDK后的处理流程}
+	\includegraphics[width = .6\textwidth]{frame_dpdk.jpg}
+	\caption{UDP-DPDK处理流程}
 \end{figure}
 
-%===========第三节=================
-\section{DPDK}
+\subsection{添加DPDK后的处理流程方案}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .8\textwidth]{frame_step2.pdf}
+	\caption{添加DPDK后的处理流程方案}
+\end{figure}
 
 %===========存在问题=================
 \section{存在问题}
-1. 
+1. DPDK程序中添加信号量？
 
-2. 
+2. 关于makefile
 
 %===========下周计划=================
 \section{下周计划}
-1. 
+1. 学习Makefile、cmake等相关内容
 
-2. 
+2. 尝试在数据处理程序中添加DPDK模块
 
 \end{document}
 %%%%%%%%%%%%%%%%%%%%%%%这是正文部分的结束%%%%%%%%%%%%
