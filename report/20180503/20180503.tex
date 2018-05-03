@@ -124,21 +124,28 @@
 安装libnuma-dev —— sudo apt install libnuma-dev\\
 2. Hugepages配置问题\\
 在/boot/grub/grub.cfg第148行\$vt\_handoff后添加defaul\_hugepagesz=1G hugepagesz=1G hugepages=4
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .8\textwidth]{compile.png}
+	\caption{测试样程结果}
+\end{figure}
 \subsection{DPDK样程}
 官方文档 http://dpdk.org/doc/guides/sample\_app\_ug/index.html
 \subsubsection{Hello World}
 1. 环境抽象层(EAL)初始化——rte\_eal\_init(argc, argv);\\
-2. 加载lcore——rte\_eal\_remote\_launch(lcore\_hello, NULL, lcore\_id);\\
+2. 加载lcore——rte\_eal\_remote\_launch(lcore\_hello, NULL, lcore\_id);
 \subsubsection{Basic Forwarding Sample Application}
-1. 分配缓冲池mbufs空间——rte\_mempool\_create(...);\\
-2. 初始化端口——port\_init(portid, mbuf\_pool);\\
+1. 环境抽象层(EAL)初始化
+2. 分配缓冲池mbufs空间——rte\_mempool\_create(...);\\
+3. 初始化端口——port\_init(portid, mbuf\_pool);\\
+4. 加载lcore
 \subsubsection{Network Layer 2 forwarding}
 1. 参数控制（选择的端口、每个lcore对应的端口数）——l2fwd\_parse\_args(argc, argv);\\
 2. 信息缓冲池初始化\\
 3. PCI驱动初始化\\
 4. RX队列初始化\\
 5. TX队列初始化\\
-6. 接收、数据处理、发包\\
+6. 接收、数据处理、发包
 \begin{figure}[H]
 	\centering
 	\includegraphics[width = .8\textwidth]{frame_l2f.jpg}
@@ -170,7 +177,7 @@
 
 %===========存在问题=================
 \section{存在问题}
-1. DPDK程序中添加信号量？
+1. 关于流量控制
 
 2. 关于makefile
 

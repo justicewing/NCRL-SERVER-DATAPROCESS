@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017) (preloaded format=xelatex 2018.4.28)  3 MAY 2018 13:17
+This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017) (preloaded format=xelatex 2018.4.28)  3 MAY 2018 13:55
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1513,36 +1513,25 @@ File: result_server.png Graphic file (type bmp)
  [1
 
 ]
-Underfull \hbox (badness 10000) in paragraph at lines 130--132
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 133--135
-
- []
-
+File: compile.png Graphic file (type bmp)
+<compile.png>
+ [2]
 File: frame_l2f.jpg Graphic file (type bmp)
 <frame_l2f.jpg>
-
-Underfull \hbox (badness 10000) in paragraph at lines 136--145
-
- []
-
-[2]
 File: frame_step1.pdf Graphic file (type pdf)
 <use frame_step1.pdf>
+
+[3]
 File: frame_dpdk.jpg Graphic file (type bmp)
 <frame_dpdk.jpg>
- [3]
 File: frame_step2.pdf Graphic file (type pdf)
 <use frame_step2.pdf>
  [4] [5] (./20180503.aux) ) 
 Here is how much of TeX's memory you used:
- 23264 strings out of 493007
- 470008 string characters out of 6134605
- 514062 words of memory out of 5000000
- 27008 multiletter control sequences out of 15000+600000
+ 23258 strings out of 493007
+ 469278 string characters out of 6134605
+ 511062 words of memory out of 5000000
+ 27001 multiletter control sequences out of 15000+600000
  538054 words of font info for 77 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  57i,8n,74p,10522b,290s stack positions out of 5000i,500n,10000p,200000b,80000s
