@@ -76,7 +76,7 @@ int main()
 	/*----------测试参数设置----------*/
 	omp_set_num_threads(1);
 	uint32_t seed = 1;
-	int layerNum = 8;
+	int layerNum = 8; // 流数
 	const int SNR_min = 100, SNR_max = 100;
 	const int CQI_min = 15, CQI_max = 15;
 	const int loopNum = 10;
@@ -481,9 +481,11 @@ int main()
 						srand(seed);
 						for (int i = 0; i < layerNum; i++)
 						{
-							data_len_tx[i] = 
-							(int)(CQI_cod[CQI_index[i]] / 
-							1024.0 * max_symbol_num * CQI_mod[CQI_index[i]] - crc_length) / 8 * 8;
+							data_len_tx[i] =
+								(int)(CQI_cod[CQI_index[i]] /
+										  1024.0 * max_symbol_num * CQI_mod[CQI_index[i]] -
+									  crc_length) /
+								8 * 8;
 							//data_len_tx[i] = data_len_tx[i] / 8;
 							//data_len_tx[i] = (rand() % (data_len_tx[i] / 8) + 1) * 8;
 							//data_len_tx[i] = 16;
@@ -780,7 +782,7 @@ int main()
 						// 	if(H_est[i].real!=0)
 						// 		printf("%d ",i/(RxAntNum * LayerNum * CarrierNum));
 						// }
-						
+
 						//for(int i = 0; i< 10; i++) printf("%d : %f+%fi  %f+%fi %e\n", i, x[i].real, x[i].imag, x_est[i].real,x_est[i].imag,SymbVar[i]);
 
 						gettimeofday(&sigdect_end, NULL); //______________________
@@ -1003,8 +1005,11 @@ int main()
 						gettimeofday(&rx_end, NULL); //______________________
 						runtime.rx += (rx_end.tv_sec - rx_begin.tv_sec) + (rx_end.tv_usec - rx_begin.tv_usec) / 1000000.0;
 
+						// 解包
 						for (int i = 0; i < layerNum; ++i)
 							srslte_bit_unpack_vector(data_bytes_rx[i], data_rx[i], data_len_rx[i]);
+
+						// 计算误码率
 						error_num = 0;
 						data_num = 0;
 						for (int i = 0; i < layerNum; ++i)
@@ -1037,9 +1042,11 @@ int main()
 				fprintf(fp_ber, "%f\n", block_errors);
 				index++;
 				if (LinkAdptState == 1)
-					printf("test %d SNR = %.2f sigma = %e : bits error:%f(%d/%d), blocks error:%f(%d/%d)\n", index, SNR, sigma, error_all * 1.0 / bits_all, error_all, bits_all, block_errors, block_error_all, block_all);
+					printf("test %d SNR = %.2f sigma = %e : bits error:%f(%d/%d), blocks error:%f(%d/%d)\n",
+						   index, SNR, sigma, error_all * 1.0 / bits_all, error_all, bits_all, block_errors, block_error_all, block_all);
 				else
-					printf("test %d CQI = %d SNR = %.2f sigma = %e : bits error:%f(%d/%d), blocks error:%f(%d/%d)\n", index, c, SNR, sigma, error_all * 1.0 / bits_all, error_all, bits_all, block_errors, block_error_all, block_all);
+					printf("test %d CQI = %d SNR = %.2f sigma = %e : bits error:%f(%d/%d), blocks error:%f(%d/%d)\n",
+						   index, c, SNR, sigma, error_all * 1.0 / bits_all, error_all, bits_all, block_errors, block_error_all, block_all);
 				//for (int i = 0; i < layerNum; ++i) printf("%d ",layer_check[i]);
 				//printf("\n");
 				//*
@@ -1056,7 +1063,7 @@ int main()
 					printf("Modulation         :%8.4fs (%5.2f%%)\n", runtime.mod, runtime.mod / runtime.tx * 100);
 					printf("Packing            :%8.4fs (%5.2f%%)\n", runtime.pack, runtime.pack / runtime.tx * 100);
 					printf("Others in TX       :%8.4fs (%5.2f%%)\n", runtime.others_tx, runtime.others_tx / runtime.tx * 100);
-					printf("                                     \n");
+					printf("                                    \n");
 					printf("Channel estimation :%8.4fs (%5.2f%%)\n", runtime.chest, runtime.chest / runtime.rx * 100);
 					printf("Signal Detection   :%8.4fs (%5.2f%%)\n", runtime.sigdect, runtime.sigdect / runtime.rx * 100);
 					printf("Link adaptation    :%8.4fs (%5.2f%%)\n", runtime.cqi, runtime.cqi / runtime.rx * 100);
@@ -1066,11 +1073,11 @@ int main()
 					printf("CRC check          :%8.4fs (%5.2f%%)\n", runtime.crccheck, runtime.crccheck / runtime.rx * 100);
 					printf("Others in RX       :%8.4fs (%5.2f%%)\n", runtime.others_rx, runtime.others_rx / runtime.rx * 100);
 					printf("\n");
-					printf("Total time in TX   :%8.4fs         \n", runtime.tx, runtime.tx / runtime.tx * 100);
-					printf("Total time in RX   :%8.4fs         \n", runtime.rx, runtime.rx / runtime.rx * 100);
+					printf("Total time in TX   :%8.4fs          \n", runtime.tx, runtime.tx / runtime.tx * 100);
+					printf("Total time in RX   :%8.4fs          \n", runtime.rx, runtime.rx / runtime.rx * 100);
 					printf("\n");
-					printf("Throughput in TX   :%8.4fMbps      \n", bits_all / runtime.tx / 1000000);
-					printf("Throughput in RX   :%8.4fMbps      \n", bits_all / runtime.rx / 1000000);
+					printf("Throughput in TX   :%8.4fMbps       \n", bits_all / runtime.tx / 1000000);
+					printf("Throughput in RX   :%8.4fMbps       \n", bits_all / runtime.rx / 1000000);
 					printf("\n");
 				}
 				//*/
