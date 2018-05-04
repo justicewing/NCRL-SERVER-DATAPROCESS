@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "omp.h": "c",
-        "turbodecoder.h": "c"
+        "turbodecoder.h": "c",
+        "vector.h": "c"
     }
 }
