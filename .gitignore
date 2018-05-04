@@ -3,3 +3,4 @@ multi/channel/*
 single/channel/*
 *.[oa]
 single/main
+multi/main
