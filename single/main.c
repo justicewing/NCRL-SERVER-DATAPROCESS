@@ -78,8 +78,8 @@ int main()
 	uint32_t seed = 1;
 	int layerNum = 8; // 流数
 	const int SNR_min = 100, SNR_max = 100;
-	const int CQI_min = 15, CQI_max = 15;
-	const int loopNum = 10;
+	const int CQI_min = 11, CQI_max = 15;
+	const int loopNum = 10;	// 循环次数 num_block = loopNum * floorNum
 	const int step = 1;
 	const int datasymNum = 12;
 	const int subframeNum = 1;
@@ -90,21 +90,20 @@ int main()
 
 	//int H_layer[8] = {91,90,93,92,89,88,87,95};//1
 	//int H_layer[8] = {87,88,89,90,91,92,93};
-
 	int H_layer[8] = {76, 77, 75, 73, 74, 72, 78, 79}; //2
 	//int H_layer[8] = {72,73,74,75,76,77,78,79};
-
 	//int H_layer[8] = {66,67,68,65,69,64,70,63};//3
 	//int H_layer[8] = {63,64,65,66,67,68,69,70};
 
-	int H_Type = 0;		   //0：理想信道  1：估计信道
-	int ChEstType = 0;	 //0：LS  1：DCT
-	int LinkAdptState = 0; //0: 固定CQI 1：链路自适应
+	int H_Type = 0;			//0：理想信道  1：估计信道
+	int ChEstType = 0;		//0：LS  1：DCT
+	int LinkAdptState = 0;	//0: 固定CQI 1：链路自适应
 	int inter_freq = layerNum;
 	while (CarrierNum % inter_freq != 0)
 		inter_freq++;
-	printf("double:%d float:%d int16_t:%d\n",
-		   sizeof(double), sizeof(float), sizeof(int16_t));
+	// printf("double:%d float:%d int16_t:%d\n",
+	// 	   sizeof(double), sizeof(float), sizeof(int16_t));
+
 	/*----------读取信道信息----------*/
 	//信道矩阵
 	uint32_t m = 0;
@@ -123,7 +122,7 @@ int main()
 		m++;
 	}
 	fclose(fp_hr);
-	//printf("m = %d\n",m);
+	//printf("m = %d\n",m);	
 
 	FILE *fp_hi;
 	fp_hi = fopen("channel/H_imag2.txt", "r");
@@ -138,6 +137,7 @@ int main()
 	}
 	fclose(fp_hi);
 	//printf("m = %d\n",m);
+	printf("Set Channel Down!");
 
 	lapack_complex_float *H[subframeNum];
 	for (int t = 0; t < subframeNum; t++)
@@ -438,7 +438,7 @@ int main()
 	{
 		for (int i = 0; i < MaxBeam; i++)
 			CQI_index[i] = c;
-		printf("\n====================\n\n1.Error rate statistics\n\n");
+		
 		for (int SNR_test = SNR_min; SNR_test <= SNR_max; SNR_test++)
 		{
 			for (int step_test = 0; step_test < step; step_test++)
@@ -1041,11 +1041,12 @@ int main()
 				fprintf(fp_er, "%f\n", errors);
 				fprintf(fp_ber, "%f\n", block_errors);
 				index++;
+				printf("\n====================\n\n1.Error rate statistics\n\n");
 				if (LinkAdptState == 1)
-					printf("test %d SNR = %.2f sigma = %e : bits error:%f(%d/%d), blocks error:%f(%d/%d)\n",
+					printf("test %d SNR = %.2f sigma = %e\nbits error:%f(%d/%d)\nblocks error:%f(%d/%d)\n",
 						   index, SNR, sigma, error_all * 1.0 / bits_all, error_all, bits_all, block_errors, block_error_all, block_all);
 				else
-					printf("test %d CQI = %d SNR = %.2f sigma = %e : bits error:%f(%d/%d), blocks error:%f(%d/%d)\n",
+					printf("test %d CQI = %d SNR = %.2f sigma = %e\nbits error:%f(%d/%d)\nblocks error:%f(%d/%d)\n",
 						   index, c, SNR, sigma, error_all * 1.0 / bits_all, error_all, bits_all, block_errors, block_error_all, block_all);
 				//for (int i = 0; i < layerNum; ++i) printf("%d ",layer_check[i]);
 				//printf("\n");

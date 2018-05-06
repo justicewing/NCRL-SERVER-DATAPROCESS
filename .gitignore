@@ -3,3 +3,5 @@ single/channel/*
 *.[oa]
 single/main
 multi/main
+single/statistics/berrors_1200_14_1.txt
+single/statistics/errors_1200_14_1.txt
