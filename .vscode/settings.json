@@ -2,6 +2,7 @@
     "files.associations": {
         "omp.h": "c",
         "turbodecoder.h": "c",
-        "vector.h": "c"
+        "vector.h": "c",
+        "mkl.h": "c"
     }
 }

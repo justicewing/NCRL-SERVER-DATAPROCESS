@@ -98,11 +98,11 @@ void Cal_ChQ(lapack_complex_float *Q, int RxAntNum, int TxAntNum, lapack_complex
 void Cal_LamdaMx(lapack_complex_float *q2, float *lamda, int TxAntNum);
 
 void CalSymb_mmse(
-	lapack_complex_float *h_tmp,
-	lapack_complex_float *Signal,
-	int RxAntNum, int CarrierNum,
-	int layerNum, int SymbNum,
-	float sigma, int Step, int flg_ave,
+	lapack_complex_float *h_tmp,		// 信道参数
+	lapack_complex_float *Signal,		// 待估计信号
+	int RxAntNum, int CarrierNum,		// 接收天线数, 载波数
+	int layerNum, int SymbNum,			// 流数, 符号数
+	float sigma, int Step, int flg_ave,	// 噪声标准差, ?, 
 	lapack_complex_float *SymbEst,
 	float *SymbVar, float *SINR_est)
 {
