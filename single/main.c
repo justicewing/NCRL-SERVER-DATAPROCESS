@@ -27,6 +27,10 @@
 
 #include "config.h"
 
+#define BER_FILE "statistics/BER_ideal_pilot.txt"
+#define FER_FILE "statistics/FER_ideal_pilot.txt"
+#define SNR_FILE "statistics/SNR_ideal_pilot.txt"
+
 int main()
 {
 	/*==========running time test==========*/
@@ -77,12 +81,16 @@ int main()
 	omp_set_num_threads(1);
 	uint32_t seed = 1;
 	int layerNum = 8; // 流数
-	const int SNR_min = 100, SNR_max = 100;
-	const int CQI_min = 11, CQI_max = 15;
-	const int loopNum = 10;	// 循环次数 num_block = loopNum * floorNum
+	const int SNR_min = 0, SNR_max = 50;
+	const int CQI_min = 15, CQI_max = 15;
+	const int loopNum = 10; // 循环次数;num_block = loopNum * floorNum
 	const int step = 1;
 	const int datasymNum = 12;
 	const int subframeNum = 1;
+	int H_Type = 2;		   //0：理想信道  1：估计信道	2:理想信道导频部分
+	int ChEstType = 0;	 //0：LS  1：DCT
+	int LinkAdptState = 0; //0: 固定CQI 1：链路自适应
+
 	int *CQI_index = (int *)malloc(sizeof(int) * MaxBeam);
 	int *CQI_index_ = (int *)malloc(sizeof(int) * LayerNum);
 	//for(int i = 0; i < MaxBeam; i++) CQI_index[i] = 1;
@@ -95,9 +103,6 @@ int main()
 	//int H_layer[8] = {66,67,68,65,69,64,70,63};//3
 	//int H_layer[8] = {63,64,65,66,67,68,69,70};
 
-	int H_Type = 0;			//0：理想信道  1：估计信道
-	int ChEstType = 0;		//0：LS  1：DCT
-	int LinkAdptState = 0;	//0: 固定CQI 1：链路自适应
 	int inter_freq = layerNum;
 	while (CarrierNum % inter_freq != 0)
 		inter_freq++;
@@ -106,6 +111,7 @@ int main()
 
 	/*----------读取信道信息----------*/
 	//信道矩阵
+	printf("Start Setting Channel...\n");
 	uint32_t m = 0;
 	lapack_complex_float *channel =
 		(lapack_complex_float *)malloc(sizeof(lapack_complex_float) *
@@ -122,7 +128,7 @@ int main()
 		m++;
 	}
 	fclose(fp_hr);
-	//printf("m = %d\n",m);	
+	//printf("m = %d\n",m);
 
 	FILE *fp_hi;
 	fp_hi = fopen("channel/H_imag2.txt", "r");
@@ -137,7 +143,7 @@ int main()
 	}
 	fclose(fp_hi);
 	//printf("m = %d\n",m);
-	printf("Set Channel Down!");
+	printf("Set Channel Down!\n");
 
 	lapack_complex_float *H[subframeNum];
 	for (int t = 0; t < subframeNum; t++)
@@ -426,11 +432,11 @@ int main()
 	int block_error_all = 0, block_all = 0;
 	uint32_t error_all = 0, bits_all = 0;
 	FILE *fp_er;
-	fp_er = fopen("statistics/errors_1200_14_1.txt", "w+");
+	fp_er = fopen(BER_FILE, "w+");
 	FILE *fp_ber;
-	fp_ber = fopen("statistics/berrors_1200_14_1.txt", "w+");
+	fp_ber = fopen(FER_FILE, "w+");
 	FILE *fp_sg;
-	fp_sg = fopen("statistics/SNR.txt", "w+");
+	fp_sg = fopen(SNR_FILE, "w+");
 	printf("start running...\n");
 
 	int layer_check[MaxBeam];
@@ -438,7 +444,7 @@ int main()
 	{
 		for (int i = 0; i < MaxBeam; i++)
 			CQI_index[i] = c;
-		
+
 		for (int SNR_test = SNR_min; SNR_test <= SNR_max; SNR_test++)
 		{
 			for (int step_test = 0; step_test < step; step_test++)
@@ -751,7 +757,7 @@ int main()
 						gettimeofday(&sigdect_begin, NULL); //--------------------sigdect
 
 						if (H_Type == 1)
-						{ //估计信道
+						{ // 估计信道
 							if (layerNum == 1)
 							{
 								CalSymb_mmse_1(H_est, y, RxAntNum, CarrierNum, symbolNum, sqrt(noise2), 1, 1, x_est, SymbVar, SINR_est);
@@ -761,15 +767,26 @@ int main()
 								CalSymb_mmse(H_est, y, RxAntNum, CarrierNum, layerNum, symbolNum, sqrt(noise2), 1, 1, x_est, SymbVar, SINR_est);
 							}
 						}
+						else if (H_Type == 2)
+						{ // 理想信道导频部分
+							if (layerNum == 1)
+							{
+								CalSymb_mmse_1(H[t], y, RxAntNum, CarrierNum, symbolNum, sqrt(noise2), 1, 1, x_est, SymbVar, SINR_est);
+							}
+							else
+							{
+								CalSymb_mmse(H[t], y, RxAntNum, CarrierNum, layerNum, symbolNum, sqrt(noise2), 1, 1, x_est, SymbVar, SINR_est);
+							}
+						}
 						else
-						{ //理想信道
+						{ // 理想信道
 							if (layerNum == 1)
 							{
 								CalSymb_mmse_1(H[t], y, RxAntNum, CarrierNum, symbolNum, sigma, 1, 1, x_est, SymbVar, SINR_est);
 							}
 							else
 							{
-								CalSymb_mmse(H[t], y, RxAntNum, CarrierNum, layerNum, symbolNum, 0.001, 1, 1, x_est, SymbVar, SINR_est);
+								CalSymb_mmse_ideal(H[t], y, RxAntNum, CarrierNum, layerNum, symbolNum, 0.001, 1, 1, x_est, SymbVar, SINR_est);
 							}
 						}
 						// for(int i=0;i<100;i++)

@@ -102,7 +102,7 @@ void CalSymb_mmse(
 	lapack_complex_float *Signal,		// 待估计信号
 	int RxAntNum, int CarrierNum,		// 接收天线数, 载波数
 	int layerNum, int SymbNum,			// 流数, 符号数
-	float sigma, int Step, int flg_ave,	// 噪声标准差, ?, 
+	float sigma, int Step, int flg_ave, // 噪声标准差, ?,
 	lapack_complex_float *SymbEst,
 	float *SymbVar, float *SINR_est)
 {
@@ -149,7 +149,7 @@ void CalSymb_mmse(
 
 				if (!(j % Step) && i == 0)
 				{
-					ch_res = h_tmp + H_map[s] * CarrierNum * RxAntNum * layerNum + j * RxAntNum * layerNum;
+					ch_res = h_tmp + H_map[i] * CarrierNum * RxAntNum * layerNum + j * RxAntNum * layerNum;
 					/*
 					for (k = 0; k < RxAntNum * layerNum; ++k) {
 						//ch_res[k].real = h_tmp[H_map[s] * CarrierNum * RxAntNum * layerNum + j * RxAntNum * layerNum + k].real;
@@ -180,6 +180,109 @@ void CalSymb_mmse(
 					//if(j == 0) printf("\nlayer %d x_est :%f+%fi",k,x_est[k].real, x_est[k].imag);
 					SymbVar[((s * SymbNum / 2 + i) * CarrierNum + j) * layerNum + k] = x_var[k];
 					SINR_est[((s * SymbNum / 2 + i) * CarrierNum + j) * layerNum + k] = 1 / (x_var[k] + scale * (sigma * sigma) * (sigma * sigma) / y_temp / CarrierNum);
+				}
+			}
+		}
+	}
+
+	free(x_est);
+	free(x_var);
+	free(ch_mx);
+	free(Signal_Rec);
+	//free(ch_res);
+	//the variable used in the subfunction
+	free(ch_q);
+	free(ch_q1);
+	free(ch_q2);
+	free(Q_Matrix);
+	free(lamda);
+	free(tau);
+}
+
+void CalSymb_mmse_ideal(
+	lapack_complex_float *h_tmp,		// 信道参数
+	lapack_complex_float *Signal,		// 待估计信号
+	int RxAntNum, int CarrierNum,		// 接收天线数, 载波数
+	int layerNum, int SymbNum,			// 流数, 符号数
+	float sigma, int Step, int flg_ave, // 噪声标准差, ?,
+	lapack_complex_float *SymbEst,
+	float *SymbVar, float *SINR_est)
+{
+	int i, j, k, s;
+	lapack_complex_float *x_est;
+	float *x_var;
+	lapack_complex_float *ch_mx;
+	lapack_complex_float *ch_res;
+	lapack_complex_float *Signal_Rec;
+
+	//the variable used in the subfunction
+	lapack_complex_float *ch_q;
+	lapack_complex_float *ch_q1, *ch_q2;
+	lapack_complex_float *Q_Matrix;
+	float *lamda;
+	lapack_complex_float *tau;
+
+	float scale = 1;
+	float y_temp = 0;
+
+	x_est = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * layerNum);
+	x_var = (float *)malloc(sizeof(float) * layerNum);
+	Signal_Rec = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum);
+	ch_mx = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * SymbNum * CarrierNum * RxAntNum * layerNum);
+	//ch_res = (lapack_complex_float *)malloc(sizeof(lapack_complex_float)*RxAntNum*layerNum);
+
+	ch_q = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * (RxAntNum + layerNum) * layerNum);
+	ch_q1 = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum * layerNum);
+	ch_q2 = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * layerNum * layerNum);
+	Q_Matrix = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * layerNum * RxAntNum);
+	lamda = (float *)malloc(sizeof(float) * layerNum);
+	tau = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * layerNum);
+
+	if (!flg_ave)
+		Step = 1;
+	int H_map[2] = {3, 10};
+	//the estimation of every symbol and its var, every subcarrier
+	//for (s = 0; s < 2; ++s)
+	s = 0;
+	{
+		for (j = 0; j < CarrierNum; ++j)
+		{
+			for (i = 0; i < SymbNum; ++i)
+			{
+
+				//if (!(j % Step) && i == 0)
+				{
+					ch_res = h_tmp + i * CarrierNum * RxAntNum * layerNum + j * RxAntNum * layerNum;
+					/*
+					for (k = 0; k < RxAntNum * layerNum; ++k) {
+						//ch_res[k].real = h_tmp[H_map[s] * CarrierNum * RxAntNum * layerNum + j * RxAntNum * layerNum + k].real;
+						//ch_res[k].imag = h_tmp[H_map[s] * CarrierNum * RxAntNum * layerNum + j * RxAntNum * layerNum + k].imag;
+						ch_res[k].real = h_tmp[(s * SymbNum / 2 + i) * CarrierNum * RxAntNum * layerNum + j * RxAntNum * layerNum + k].real;
+						ch_res[k].imag = h_tmp[(s * SymbNum / 2 + i) * CarrierNum * RxAntNum * layerNum + j * RxAntNum * layerNum + k].imag;
+					}
+					*/
+					//calculate the extended channel matrix and its Q matrix
+					qr_dcpt(ch_res, tau, sigma, RxAntNum, layerNum, ch_q);
+					Cal_ChQ(ch_q, RxAntNum, layerNum, ch_q1, ch_q2, lamda, Q_Matrix);
+				}
+
+				init_SignalRec(Signal, j, (s * SymbNum + i), RxAntNum, CarrierNum, Signal_Rec);
+
+				y_temp = 0;
+				for (int c = 0; c < RxAntNum; ++c)
+				{
+					y_temp += (Signal_Rec[c].real * Signal_Rec[c].real + Signal_Rec[c].imag * Signal_Rec[c].imag);
+				}
+
+				//CalSymbEst(Signal_Rec, sigma, RxAntNum, layerNum, ch_q1, ch_q2, lamda, x_est, x_var);
+				CalSymbEst2(Signal_Rec, sigma, RxAntNum, layerNum, Q_Matrix, lamda, x_est, x_var);
+				for (k = 0; k < layerNum; ++k)
+				{
+					SymbEst[((s * SymbNum + i) * CarrierNum + j) * layerNum + k].real = x_est[k].real;
+					SymbEst[((s * SymbNum + i) * CarrierNum + j) * layerNum + k].imag = x_est[k].imag;
+					//if(j == 0) printf("\nlayer %d x_est :%f+%fi",k,x_est[k].real, x_est[k].imag);
+					SymbVar[((s * SymbNum + i) * CarrierNum + j) * layerNum + k] = x_var[k];
+					SINR_est[((s * SymbNum + i) * CarrierNum + j) * layerNum + k] = 1 / (x_var[k] + scale * (sigma * sigma) * (sigma * sigma) / y_temp / CarrierNum);
 				}
 			}
 		}
