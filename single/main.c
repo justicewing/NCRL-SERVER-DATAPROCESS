@@ -823,6 +823,7 @@ int main()
 						// 	//printf("layer%d : SymbVarM = %lf SINR = %lf\n", i, SymbVarM[i], SINR[i]);
 						// }
 
+						/* 链路自适应 */
 						gettimeofday(&cqi_begin, NULL); //--------------------cqi
 						//printf("CQI_feedback : ");
 						if (LinkAdptState == 1)
