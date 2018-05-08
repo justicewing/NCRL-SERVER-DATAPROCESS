@@ -78,18 +78,18 @@ int main()
 
 	/*==========running time test==========*/
 	/*----------测试参数设置----------*/
-	omp_set_num_threads(1);
+	omp_set_num_threads(2);
 	uint32_t seed = 1;
-	int layerNum = 4; // 流数
-	const int SNR_min = 0, SNR_max = 50;
+	int layerNum = 8; // 流数
+	const int SNR_min = 15, SNR_max = 15;
 	const int CQI_min = 15, CQI_max = 15;
 	const int loopNum = 10; // 循环次数;num_block = loopNum * floorNum
 	const int step = 1;
 	const int datasymNum = 12;
 	const int subframeNum = 1;
-	int H_Type = 1;			//0：理想信道  1：估计信道	2:理想信道导频部分
-	int ChEstType = 0;		//0：LS  1：DCT
-	int LinkAdptState = 0;	//0: 固定CQI 1：链路自适应
+	const int H_Type = 1;		 //0：理想信道  1：估计信道	2:理想信道导频部分
+	const int ChEstType = 0;	 //0：LS  1：DCT
+	const int LinkAdptState = 0; //0: 固定CQI 1：链路自适应
 
 	int *CQI_index = (int *)malloc(sizeof(int) * MaxBeam);
 	int *CQI_index_ = (int *)malloc(sizeof(int) * LayerNum);
@@ -804,21 +804,25 @@ int main()
 
 						gettimeofday(&sigdect_end, NULL); //______________________
 						runtime.sigdect += (sigdect_end.tv_sec - sigdect_begin.tv_sec) + (sigdect_end.tv_usec - sigdect_begin.tv_usec) / 1000000.0;
-						/*
-	bzero(SymbVarM,sizeof(float) * MaxBeam);
-	for(int ns = 0; ns < symbolNum; ns++){
-		for(int nc = 0; nc < CarrierNum; nc++){
-			for(int nl = 0; nl < layerNum; nl++){
-				SymbVarM[nl] += SINR_est[ns * CarrierNum * layerNum + nc * layerNum + nl];
-			}
-		}
-	}
-	for(int i = 0; i < layerNum; i++){
-		SymbVarM[i] /= symbolNum * CarrierNum;
-		SINR[i] = 10 * log10(SymbVarM[i]);
-		//printf("layer%d : SymbVarM = %lf SINR = %lf\n", i, SymbVarM[i], SINR[i]);
-	}
-*/
+
+						// bzero(SymbVarM, sizeof(float) * MaxBeam);
+						// for (int ns = 0; ns < symbolNum; ns++)
+						// {
+						// 	for (int nc = 0; nc < CarrierNum; nc++)
+						// 	{
+						// 		for (int nl = 0; nl < layerNum; nl++)
+						// 		{
+						// 			SymbVarM[nl] += SINR_est[ns * CarrierNum * layerNum + nc * layerNum + nl];
+						// 		}
+						// 	}
+						// }
+						// for (int i = 0; i < layerNum; i++)
+						// {
+						// 	SymbVarM[i] /= symbolNum * CarrierNum;
+						// 	SINR[i] = 10 * log10(SymbVarM[i]);
+						// 	//printf("layer%d : SymbVarM = %lf SINR = %lf\n", i, SymbVarM[i], SINR[i]);
+						// }
+
 						gettimeofday(&cqi_begin, NULL); //--------------------cqi
 						//printf("CQI_feedback : ");
 						if (LinkAdptState == 1)
