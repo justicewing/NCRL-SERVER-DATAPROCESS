@@ -27,12 +27,13 @@
 
 #include "config.h"
 
-#define BER_FILE "statistics/BER_detect_flow5.txt"
-#define FER_FILE "statistics/FER_detect_flow5.txt"
-#define SNR_FILE "statistics/SNR_detect_flow5.txt"
+#define BER_FILE "statistics/BER_ideal_pilot.txt"
+#define FER_FILE "statistics/FER_temp2.txt"
+#define SNR_FILE "statistics/SNR_temp2.txt"
 
 int main()
 {
+	const int H_Type = 2;		 //0：理想信道  1：估计信道	2:理想信道导频部分
 	/*==========running time test==========*/
 
 	struct timeval crc_begin, crc_end;
@@ -78,16 +79,16 @@ int main()
 
 	/*==========running time test==========*/
 	/*----------测试参数设置----------*/
-	omp_set_num_threads(2);
+	omp_set_num_threads(1);
 	uint32_t seed = 1;
 	int layerNum = 8; // 流数
-	const int SNR_min = 15, SNR_max = 15;
-	const int CQI_min = 15, CQI_max = 15;
+	const int SNR_min = 0, SNR_max = 50;
+	const int CQI_min = 1, CQI_max = 15;
 	const int loopNum = 10; // 循环次数;num_block = loopNum * floorNum
 	const int step = 1;
 	const int datasymNum = 12;
 	const int subframeNum = 1;
-	const int H_Type = 1;		 //0：理想信道  1：估计信道	2:理想信道导频部分
+	
 	const int ChEstType = 0;	 //0：LS  1：DCT
 	const int LinkAdptState = 0; //0: 固定CQI 1：链路自适应
 
