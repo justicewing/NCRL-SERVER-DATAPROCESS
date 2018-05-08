@@ -27,9 +27,9 @@
 
 #include "config.h"
 
-#define BER_FILE "statistics/BER_ideal_pilot.txt"
-#define FER_FILE "statistics/FER_ideal_pilot.txt"
-#define SNR_FILE "statistics/SNR_ideal_pilot.txt"
+#define BER_FILE "statistics/BER_detect_flow5.txt"
+#define FER_FILE "statistics/FER_detect_flow5.txt"
+#define SNR_FILE "statistics/SNR_detect_flow5.txt"
 
 int main()
 {
@@ -80,16 +80,16 @@ int main()
 	/*----------测试参数设置----------*/
 	omp_set_num_threads(1);
 	uint32_t seed = 1;
-	int layerNum = 8; // 流数
+	int layerNum = 4; // 流数
 	const int SNR_min = 0, SNR_max = 50;
 	const int CQI_min = 15, CQI_max = 15;
 	const int loopNum = 10; // 循环次数;num_block = loopNum * floorNum
 	const int step = 1;
 	const int datasymNum = 12;
 	const int subframeNum = 1;
-	int H_Type = 2;		   //0：理想信道  1：估计信道	2:理想信道导频部分
-	int ChEstType = 0;	 //0：LS  1：DCT
-	int LinkAdptState = 0; //0: 固定CQI 1：链路自适应
+	int H_Type = 1;			//0：理想信道  1：估计信道	2:理想信道导频部分
+	int ChEstType = 0;		//0：LS  1：DCT
+	int LinkAdptState = 0;	//0: 固定CQI 1：链路自适应
 
 	int *CQI_index = (int *)malloc(sizeof(int) * MaxBeam);
 	int *CQI_index_ = (int *)malloc(sizeof(int) * LayerNum);
