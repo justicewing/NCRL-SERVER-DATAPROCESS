@@ -1,4 +1,4 @@
-//版本号:1.1
+//版本号:1.0
 
 #include <stdio.h>
 #include <stdlib.h>

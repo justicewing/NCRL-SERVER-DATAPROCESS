@@ -719,7 +719,7 @@ l2fwd_main_p(void)
 	data_to_be_sent[5] = 0x77;
 	for (cnt = 6; cnt < 1416; cnt++)
 	{
-		data_to_be_sent[cnt] = 0x00;
+		data_to_be_sent[cnt] = 0xff;
 	}
 
 	while (!force_quit)
