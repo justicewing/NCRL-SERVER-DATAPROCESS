@@ -348,11 +348,6 @@ l2fwd_main_p(void)
 			printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 		else
 		{
-
-			//data_to_be_sent[4]=(unsigned char)(packet_num_threw_in_ring>>24);
-			//data_to_be_sent[5]=(unsigned char)(packet_num_threw_in_ring>>16);
-			//data_to_be_sent[6]=(unsigned char)(packet_num_threw_in_ring>>8);
-			//data_to_be_sent[7]=(unsigned char)packet_num_threw_in_ring;
 			if (pack_cnt == 0)
 			{
 				data_to_be_sent[0] = 0x0B;
@@ -378,7 +373,7 @@ l2fwd_main_p(void)
 				pack_cnt = 0;
 			}
 
-			total_length = package(mhdr, ihdr, uhdr, data_to_be_sent, m);
+			// total_length = package(mhdr, ihdr, uhdr, data_to_be_sent, m);
 			//	printf("total_length=  %d\n",total_length);
 
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
