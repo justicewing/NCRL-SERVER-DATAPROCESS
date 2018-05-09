@@ -182,348 +182,7 @@ int pack_err = 0;
 int else1 = 0;
 int else2 = 0;
 
-struct mac_hdr
-{
-	unsigned char dst_mac[6];
-	unsigned char src_mac[6];
-	unsigned char type0;
-	unsigned char type1;
-};
-struct ip_hdr
-{
-
-	unsigned short version_headlen_tos;
-	unsigned short length; //ip包总长度，包含ip头
-
-	unsigned short flags0;
-	unsigned short flags1; //标识-标志-片偏移
-
-	unsigned short ttl_protocol_checksum0;
-	unsigned short ttl_protocol_checksum1; //ttl-协议-校验
-
-	unsigned short src_ip0;
-	unsigned short src_ip1; //源ip
-
-	unsigned short dst_ip0;
-	unsigned short dst_ip1; //目的ip
-};
-struct udp_fhdr_hdr
-{
-
-	unsigned short src_ip0;
-	unsigned short src_ip1; //源ip
-
-	unsigned short dst_ip0;
-	unsigned short dst_ip1; //目的ip
-	unsigned short reserved;
-
-	unsigned short src_port;
-
-	unsigned short dst_port;
-
-	unsigned short length;
-
-	unsigned short checksum;
-};
-
-unsigned short cal_ip_checksum(struct ip_hdr hdr)
-{
-	unsigned long checksum = 0;
-	checksum =
-		hdr.version_headlen_tos + hdr.length + hdr.flags0 + hdr.flags1 + hdr.ttl_protocol_checksum0 + hdr.ttl_protocol_checksum1 + hdr.src_ip0 + hdr.src_ip1 + hdr.dst_ip0 + hdr.dst_ip1;
-	checksum = (checksum >> 16) + (checksum & 0xffff);
-	checksum += (checksum >> 16);
-	return (unsigned short)(~checksum);
-}
-unsigned short cal_udp_checksum(struct udp_fhdr_hdr hdr, unsigned char *buffer)
-{
-	unsigned long checksum = 0;
-	int num = hdr.length - 8;
-	checksum =
-		hdr.src_ip0 + hdr.src_ip1 + hdr.dst_ip0 + hdr.dst_ip1 + hdr.reserved + hdr.length + hdr.src_port + hdr.dst_port + hdr.length + hdr.checksum;
-	while (num > 1)
-	{
-		checksum += (*buffer << 8) + *(buffer + 1);
-		buffer += 2;
-		num -= sizeof(short);
-	}
-	if (num)
-	{
-		checksum += *(unsigned short *)buffer << 8;
-	}
-	checksum = (checksum >> 16) + (checksum & 0xffff);
-	checksum += (checksum >> 16);
-	return (unsigned short)(~checksum);
-}
-unsigned short get_checksum(unsigned short *buffer, int size) //size是字节数
-{
-	unsigned long cksum = 0;
-	while (size > 1)
-	{
-		printf("size=%d  buffer=%x\n", size, *buffer);
-		cksum += *buffer;
-		buffer++;
-		size -= sizeof(short);
-		printf("size=%d  checksum=%x\n", size, cksum);
-	}
-	if (size)
-	{
-		cksum += *(unsigned short *)buffer << 8;
-		printf("size=%d  buffer=%x\n", 1, *buffer);
-		printf("size=%d  checksum=%x\n", size, cksum);
-	}
-	printf("checksum00=%x\n", cksum);
-	cksum = (cksum >> 16) + (cksum & 0xffff);
-	printf("+ checksum11=%x\n", cksum);
-	cksum += (cksum >> 16);
-	printf("= checksum22=%x\n", cksum);
-	return (unsigned short)(~cksum);
-}
-
-// int package(struct mac_hdr mhdr, struct ip_hdr ihdr, struct udp_fhdr_hdr uhdr, unsigned char *data, struct rte_mbuf *m)
-// {
-// 	uint8_t *adcnt = NULL;
-// 	unsigned short ichecksum = cal_ip_checksum(ihdr);
-// 	unsigned short uchecksum = cal_udp_checksum(uhdr, data);
-// 	int total_length = 34 + uhdr.length;
-// 	int cnt = 0;
-
-// 	if (total_length > 59)
-// 	{
-// 		cnt = 0;
-// 		//printf("total_length_pa=  %d\n",total_length);
-// 		rte_pktmbuf_append(m, total_length);
-// 		for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
-// 			*adcnt = 0x00;
-
-// 		adcnt = rte_pktmbuf_mtod(m, uint8_t *);
-// 		*adcnt = mhdr.dst_mac[0];
-// 		adcnt++;
-// 		*adcnt = mhdr.dst_mac[1];
-// 		adcnt++;
-// 		*adcnt = mhdr.dst_mac[2];
-// 		adcnt++;
-// 		*adcnt = mhdr.dst_mac[3];
-// 		adcnt++;
-// 		*adcnt = mhdr.dst_mac[4];
-// 		adcnt++;
-// 		*adcnt = mhdr.dst_mac[5];
-// 		adcnt++;
-
-// 		*adcnt = mhdr.src_mac[0];
-// 		adcnt++;
-// 		*adcnt = mhdr.src_mac[1];
-// 		adcnt++;
-// 		*adcnt = mhdr.src_mac[2];
-// 		adcnt++;
-// 		*adcnt = mhdr.src_mac[3];
-// 		adcnt++;
-// 		*adcnt = mhdr.src_mac[4];
-// 		adcnt++;
-// 		*adcnt = mhdr.src_mac[5];
-// 		adcnt++;
-
-// 		*adcnt = mhdr.type0;
-// 		adcnt++;
-// 		*adcnt = mhdr.type1;
-// 		adcnt++;
-// 		*adcnt = ihdr.version_headlen_tos >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.version_headlen_tos;
-// 		adcnt++;
-// 		*adcnt = ihdr.length >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.length;
-// 		adcnt++;
-// 		*adcnt = ihdr.flags0 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.flags0;
-// 		adcnt++;
-// 		*adcnt = ihdr.flags1 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.flags1;
-// 		adcnt++;
-// 		*adcnt = ihdr.ttl_protocol_checksum0 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.ttl_protocol_checksum0;
-// 		adcnt++;
-// 		*adcnt = ichecksum >> 8;
-// 		adcnt++;
-// 		*adcnt = ichecksum;
-// 		adcnt++;
-// 		*adcnt = ihdr.src_ip0 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.src_ip0;
-// 		adcnt++;
-// 		*adcnt = ihdr.src_ip1 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.src_ip1;
-// 		adcnt++;
-// 		*adcnt = ihdr.dst_ip0 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.dst_ip0;
-// 		adcnt++;
-// 		*adcnt = ihdr.dst_ip1 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.dst_ip1;
-// 		adcnt++;
-
-// 		*adcnt = uhdr.src_port >> 8;
-// 		adcnt++;
-// 		*adcnt = uhdr.src_port;
-// 		adcnt++;
-// 		*adcnt = uhdr.dst_port >> 8;
-// 		adcnt++;
-// 		*adcnt = uhdr.dst_port;
-// 		adcnt++;
-// 		*adcnt = uhdr.length >> 8;
-// 		adcnt++;
-// 		*adcnt = uhdr.length;
-// 		adcnt++;
-// 		*adcnt = uchecksum >> 8;
-// 		adcnt++;
-// 		*adcnt = uchecksum;
-// 		adcnt++;
-
-// 		for (cnt = 0; cnt < uhdr.length - 8; cnt++)
-// 		{
-// 			*adcnt = data[cnt];
-// 			*adcnt++;
-// 		}
-
-// 		for (adcnt = rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt < (uint8_t *)m->buf_addr + m->buf_len; adcnt++)
-// 			*adcnt = 0x00;
-// 		return total_length;
-// 	}
-// 	else
-// 	{
-// 		cnt = 0;
-// 		//printf("total_length_pa1=  %d\n",total_length);
-// 		rte_pktmbuf_append(m, 60);
-// 		for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
-// 			*adcnt = 0x00;
-
-// 		adcnt = rte_pktmbuf_mtod(m, uint8_t *);
-// 		*adcnt = mhdr.dst_mac[0];
-// 		adcnt++;
-// 		*adcnt = mhdr.dst_mac[1];
-// 		adcnt++;
-// 		*adcnt = mhdr.dst_mac[2];
-// 		adcnt++;
-// 		*adcnt = mhdr.dst_mac[3];
-// 		adcnt++;
-// 		*adcnt = mhdr.dst_mac[4];
-// 		adcnt++;
-// 		*adcnt = mhdr.dst_mac[5];
-// 		adcnt++;
-
-// 		*adcnt = mhdr.src_mac[0];
-// 		adcnt++;
-// 		*adcnt = mhdr.src_mac[1];
-// 		adcnt++;
-// 		*adcnt = mhdr.src_mac[2];
-// 		adcnt++;
-// 		*adcnt = mhdr.src_mac[3];
-// 		adcnt++;
-// 		*adcnt = mhdr.src_mac[4];
-// 		adcnt++;
-// 		*adcnt = mhdr.src_mac[5];
-// 		adcnt++;
-
-// 		*adcnt = mhdr.type0;
-// 		adcnt++;
-// 		*adcnt = mhdr.type1;
-// 		adcnt++;
-// 		*adcnt = ihdr.version_headlen_tos >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.version_headlen_tos;
-// 		adcnt++;
-// 		*adcnt = ihdr.length >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.length;
-// 		adcnt++;
-// 		*adcnt = ihdr.flags0 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.flags0;
-// 		adcnt++;
-// 		*adcnt = ihdr.flags1 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.flags1;
-// 		adcnt++;
-// 		*adcnt = ihdr.ttl_protocol_checksum0 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.ttl_protocol_checksum0;
-// 		adcnt++;
-// 		*adcnt = ichecksum >> 8;
-// 		adcnt++;
-// 		*adcnt = ichecksum;
-// 		adcnt++;
-// 		*adcnt = ihdr.src_ip0 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.src_ip0;
-// 		adcnt++;
-// 		*adcnt = ihdr.src_ip1 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.src_ip1;
-// 		adcnt++;
-// 		*adcnt = ihdr.dst_ip0 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.dst_ip0;
-// 		adcnt++;
-// 		*adcnt = ihdr.dst_ip1 >> 8;
-// 		adcnt++;
-// 		*adcnt = ihdr.dst_ip1;
-// 		adcnt++;
-
-// 		*adcnt = uhdr.src_port >> 8;
-// 		adcnt++;
-// 		*adcnt = uhdr.src_port;
-// 		adcnt++;
-// 		*adcnt = uhdr.dst_port >> 8;
-// 		adcnt++;
-// 		*adcnt = uhdr.dst_port;
-// 		adcnt++;
-// 		*adcnt = uhdr.length >> 8;
-// 		adcnt++;
-// 		*adcnt = uhdr.length;
-// 		adcnt++;
-// 		*adcnt = uchecksum >> 8;
-// 		adcnt++;
-// 		*adcnt = uchecksum;
-// 		adcnt++;
-// 		for (cnt = 0; cnt < uhdr.length - 8; cnt++)
-// 		{
-// 			*adcnt = data[cnt];
-// 			*adcnt++;
-// 		}
-
-// 		for (adcnt; adcnt < rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt++)
-// 			*adcnt = 0xee;
-
-// 		for (adcnt = rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt < (uint8_t *)m->buf_addr + m->buf_len; adcnt++)
-// 			*adcnt = 0x00;
-// 		return total_length;
-// 	}
-// }
-
-int read_from_txt(char *a, int num) //从文件中将数据读入全局数组b[]中，返回0读取成功，返回1文件不存在
-{
-	FILE *fp = NULL;
-	int i = 0;
-	fp = fopen(a, "r");
-	if (fp == NULL)
-	{
-		printf("此文件不存在");
-		return 1;
-	}
-	for (i = 0; i < num; i++)
-		fscanf(fp, "%x  ", &data_to_be_sent[i]);
-	for (i = 0; i < num; i++)
-		printf("%d   %x\n", i, data_to_be_sent[i]);
-	fclose(fp);
-	return 0;
-}
-
+/* 各线程函数 */
 static int l2fwd_main_loop_send(void)
 {
 
@@ -544,7 +203,8 @@ static int l2fwd_main_loop_send(void)
 	timer_tsc = 0;
 
 	lcore_id = rte_lcore_id();
-	qconf = &lcore_queue_conf[lcore_id]; //此处每一个lcore从全局的conf中获取属于自己的conf
+	//此处每一个lcore从全局的conf中获取属于自己的conf
+	qconf = &lcore_queue_conf[lcore_id];	
 
 	double recieve_rate = 0;
 	double send_rate = 0;
@@ -618,7 +278,6 @@ static int l2fwd_main_loop_send(void)
 		}
 	}
 }
-
 static void
 l2fwd_main_loop_recieve(void)
 {
@@ -650,7 +309,6 @@ l2fwd_main_loop_recieve(void)
 			break;
 	}
 }
-
 static void
 l2fwd_main_p(void)
 {
@@ -667,49 +325,6 @@ l2fwd_main_p(void)
 	uint16_t pack_cnt = 0;
 
 	int total_length = 0;
-	struct mac_hdr mhdr;
-	mhdr.dst_mac[0] = 0xA0;
-	mhdr.dst_mac[1] = 0x36;
-	mhdr.dst_mac[2] = 0x7A;
-	mhdr.dst_mac[3] = 0x58;
-	mhdr.dst_mac[4] = 0xAD;
-	mhdr.dst_mac[5] = 0x76;
-
-	mhdr.src_mac[0] = 0xA0;
-	mhdr.src_mac[1] = 0x36;
-	mhdr.src_mac[2] = 0x9F;
-	mhdr.src_mac[3] = 0x58;
-	mhdr.src_mac[4] = 0xA6;
-	mhdr.src_mac[5] = 0x76;
-	mhdr.type0 = 0x08;
-	mhdr.type1 = 0x00;
-
-	struct udp_fhdr_hdr uhdr;
-	uhdr.src_port = 0xBEE4;
-	uhdr.dst_port = 0xBEE4;
-	uhdr.length = datalength + 8;
-	uhdr.reserved = 0x0011;
-	uhdr.src_ip0 = 0xC0A8;
-	uhdr.src_ip1 = 0x1405;
-
-	uhdr.dst_ip0 = 0xC0A8;
-	uhdr.dst_ip1 = 0x1401;
-
-	struct ip_hdr ihdr;
-	ihdr.version_headlen_tos = 0x4500;
-	ihdr.length = uhdr.length + 20;
-
-	ihdr.flags0 = 0x0000;
-	ihdr.flags1 = 0x4000;
-
-	ihdr.ttl_protocol_checksum0 = 0x4011;
-	ihdr.ttl_protocol_checksum1 = 0x0000;
-
-	ihdr.src_ip0 = 0xC0A8;
-	ihdr.src_ip1 = 0x1405;
-
-	ihdr.dst_ip0 = 0xC0A8;
-	ihdr.dst_ip1 = 0x1401;
 
 	data_to_be_sent[0] = 0xFF;
 	data_to_be_sent[1] = 0xFF;
@@ -890,6 +505,8 @@ l2fwd_main_c(void)
 	}
 	fclose(fp);
 }
+
+/* 封装函数 */
 static int
 l2fwd_launch_one_lcore_send(__attribute__((unused)) void *dummy)
 {
@@ -1126,32 +743,6 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
-
-	// FILE *fp;
-	// FILE *fpp;
-	// struct rte_mbuf *m;
-	// m=rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
-
-	// uint8_t * adcnt;
-
-	// for(adcnt=(uint8_t*)m->buf_addr;adcnt<(uint8_t*)rte_pktmbuf_mtod(m,uint8_t*);adcnt++)
-	// 	*adcnt=0xaa;
-	// for(adcnt=rte_pktmbuf_mtod(m,uint8_t*);adcnt<rte_pktmbuf_mtod(m,uint8_t*)+m->data_len;adcnt++)
-	// 	*adcnt=0xaa;
-	// for(adcnt=rte_pktmbuf_mtod(m,uint8_t*)+m->data_len;adcnt<(uint8_t*)m->buf_addr+m->buf_len;adcnt++)
-	// 	*adcnt=0xaa;
-
-	// fp=fopen("status","w");
-	// struct rte_ring *r = rte_ring_create("MY_RING", 1024,rte_socket_id(), 0);
-	// rte_ring_dump (fp, r);
-	// rte_ring_mp_enqueue(r,m);
-	// rte_ring_dump (fp, r);
-	// rte_ring_mc_dequeue(r,e);
-	// rte_ring_dump (fp, r);
-	// fclose(fp);
-	// print_mbuf_send(*(struct rte_mbuf **)e,fpp);
-	// rte_pktmbuf_free(*(struct rte_mbuf **)e);
-	// print_mbuf_send(*(struct rte_mbuf **)e,fpp);
 
 	portid = 0;
 

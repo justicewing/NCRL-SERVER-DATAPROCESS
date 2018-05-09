@@ -1,5 +1,5 @@
 dep_main.o = \
- /home/sherlockhsu/Github/DataProcess-Server-/DPDK/dpdk-stable-17.02.1/examples/dpdk_udp_1.1/main.c \
+ /home/sherlockhsu/Github/DataProcess-Server-/DPDK/examples/dpdk_udp_1.1/main.c \
  /usr/include/stdc-predef.h \
  /home/sherlockhsu/dpdk/x86_64-native-linuxapp-gcc/include/rte_config.h \
  /usr/include/stdio.h /usr/include/features.h \
