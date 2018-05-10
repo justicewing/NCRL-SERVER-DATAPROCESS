@@ -46,7 +46,7 @@
 %=========导言部分可以定义标题信息===============
 \title{组会报告}
 \author{徐益}
-\date{2018/5/3}
+\date{2018/5/10}
 
 %%%%%%%%%%%%%%%%%%%%%%%这是导言部分的结束%%%%%%%%%
 
@@ -59,17 +59,140 @@
 %=========开始正文的输入==========================
 
 %===========第零节=================
-\section{本周学习内容}
-
-1. 多线程数据处理性能测试
-
-2. DPDK添加方案
 
 %===========第一节=================
-\section{多线程数据处理性能测试}
+\section{测试系统误码性能}
+\begin{table}[H]
+	\caption{不同CQI下的Rx吞吐量(flowNum=8)}
+	\centering
+	\begin{tabular}{|l|l|l|l|}% 通过添加 | 来表示是否需要绘制竖线
+		\hline  % 在表格最上方绘制横线
+		CQI &	Modulation	&	TBS	&	Throughput	\\
+		\hline
+		1	&	QPSK		&	78	&	0.5729Mbps	\\
+		\hline
+		2	&	QPSK		&	120	&	0.8513Mbps	\\
+		\hline
+		3	&	QPSK		&	193	&	1.3445Mbps	\\
+		\hline
+		4	&	QPSK		&	308	&	2.0664Mbps	\\
+		\hline
+		5	&	QPSK		&	449	&	2.8582Mbps	\\
+		\hline
+		6	&	QPSK		&	602	&	3.6411Mbps	\\
+		\hline
+		7	&	16QAM		&	378	&	3.8403Mbps	\\
+		\hline
+		8	&	16QAM		&	490	&	4.7312Mbps	\\
+		\hline
+		9	&	16QAM		&	616	&	5.4568Mbps	\\
+		\hline
+		10	&	64QAM		&	466	&	5.7816Mbps	\\
+		\hline
+		11	&	64QAM		&	567	&	6.3868Mbps	\\
+		\hline
+		12	&	64QAM		&	666	&	7.1874Mbps	\\
+		\hline
+		13	&	64QAM		&	772	&	7.6519Mbps	\\
+		\hline
+		14	&	64QAM		&	873	&	8.0977Mbps	\\
+		\hline
+		15	&	64QAM		&	948	&	8.4716Mbps	\\
+		\hline  % 在表格最下方绘制横线
+	\end{tabular}
+	\end{table}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .6\textwidth]{plot/plot_CQI15.eps}
+\end{figure}
+
+
+\begin{figure}[H]
+	\centering
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI14.eps}
+	\end{minipage}
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI13.eps}
+	\end{minipage}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI12.eps}
+	\end{minipage}
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI11.eps}
+	\end{minipage}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI10.eps}
+	\end{minipage}
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI9.eps}
+	\end{minipage}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI8.eps}
+	\end{minipage}
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI7.eps}
+	\end{minipage}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI6.eps}
+	\end{minipage}
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI5.eps}
+	\end{minipage}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI4.eps}
+	\end{minipage}
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI3.eps}
+	\end{minipage}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI2.eps}
+	\end{minipage}
+	\begin{minipage}[t]{0.48\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{plot/plot_CQI1.eps}
+	\end{minipage}
+\end{figure}
 
 %===========第二节=================
-\section{DPDK}
+\section{学习Cmake}
 
 %===========第三节=================
 \section{DPDK添加方案}

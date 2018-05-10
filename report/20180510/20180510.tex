@@ -46,7 +46,7 @@
 %=========导言部分可以定义标题信息===============
 \title{组会报告}
 \author{徐益}
-\date{2018/5/3}
+\date{2018/5/10}
 
 %%%%%%%%%%%%%%%%%%%%%%%这是导言部分的结束%%%%%%%%%
 
@@ -59,14 +59,48 @@
 %=========开始正文的输入==========================
 
 %===========第零节=================
-\section{本周学习内容}
-
-1. 测试系统误码性能
-
-2. 学习Cmake
 
 %===========第一节=================
 \section{测试系统误码性能}
+\begin{table}[H]
+	\caption{CQI对应调制方式和编码率}
+	\centering
+	\begin{tabular}{|l|l|l|l|}% 通过添加 | 来表示是否需要绘制竖线
+		\hline  % 在表格最上方绘制横线
+		CQI &	调制方式	&	编码率x1024	\\
+		\hline
+		1	&	QPSK		&	78	\\
+		\hline
+		2	&	QPSK		&	120	\\
+		\hline
+		3	&	QPSK		&	193	\\
+		\hline
+		4	&	QPSK		&	308	\\
+		\hline
+		5	&	QPSK		&	449	\\
+		\hline
+		6	&	QPSK		&	602	\\
+		\hline
+		7	&	16QAM		&	378	\\
+		\hline
+		8	&	16QAM		&	490	\\
+		\hline
+		9	&	16QAM		&	616	\\
+		\hline
+		10	&	64QAM		&	466	\\
+		\hline
+		11	&	64QAM		&	567	\\
+		\hline
+		12	&	64QAM		&	666	\\
+		\hline
+		13	&	64QAM		&	772	\\
+		\hline
+		14	&	64QAM		&	873	\\
+		\hline
+		15	&	64QAM		&	948	\\
+		\hline  % 在表格最下方绘制横线
+	\end{tabular}
+\end{table}
 \begin{figure}[H]
 	\centering
 	\includegraphics[width = .6\textwidth]{plot/plot_CQI15.eps}
@@ -161,25 +195,14 @@
 \section{学习Cmake}
 
 %===========第三节=================
-\section{DPDK添加方案}
-
-\subsection{单服务器数据处理流程}
-
-\subsection{UDP-DPDK处理流程}
-
-\subsection{添加DPDK后的处理流程方案}
+\section{添加DPDK模块}
 
 %===========存在问题=================
-\section{存在问题}
-1. 关于流量控制
-
-2. 关于makefile
+% \section{存在问题}
 
 %===========下周计划=================
 \section{下周计划}
-1. 学习Makefile、cmake等相关内容
-
-2. 尝试在数据处理程序中添加DPDK模块
+添加DPDK模块
 
 \end{document}
 %%%%%%%%%%%%%%%%%%%%%%%这是正文部分的结束%%%%%%%%%%%%
