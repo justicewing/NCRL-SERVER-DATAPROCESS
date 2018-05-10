@@ -27,13 +27,13 @@
 
 #include "config.h"
 
-#define BER_FILE "statistics/BER_ideal_pilot.txt"
-#define FER_FILE "statistics/FER_temp2.txt"
-#define SNR_FILE "statistics/SNR_temp2.txt"
+#define BER_FILE "statistics/BER_detect_6.txt"
+#define FER_FILE "statistics/FER_temp1.txt"
+#define SNR_FILE "statistics/SNR_temp1.txt"
 
 int main()
 {
-	const int H_Type = 2;		 //0：理想信道  1：估计信道	2:理想信道导频部分
+	const int H_Type = 1;		 //0：理想信道  1：估计信道	2:理想信道导频部分
 	/*==========running time test==========*/
 
 	struct timeval crc_begin, crc_end;
@@ -81,7 +81,7 @@ int main()
 	/*----------测试参数设置----------*/
 	omp_set_num_threads(1);
 	uint32_t seed = 1;
-	int layerNum = 8; // 流数
+	int layerNum = 6; // 流数
 	const int SNR_min = 0, SNR_max = 50;
 	const int CQI_min = 1, CQI_max = 15;
 	const int loopNum = 10; // 循环次数;num_block = loopNum * floorNum
