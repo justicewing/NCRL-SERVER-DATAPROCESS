@@ -4,7 +4,8 @@
         "turbodecoder.h": "c",
         "vector.h": "c",
         "mkl.h": "c",
-        "*.ipp": "c"
+        "*.ipp": "c",
+        "typeinfo": "cpp"
     },
     "matlab-formatter.path": "C:\\Users\\Sherl\\.vscode\\extensions\\AffenWiesel.matlab-formatter-1.1.4\\formatter\\matlab_formatter.py"
 }

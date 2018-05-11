@@ -1010,9 +1010,11 @@ int main(int argc, char **argv)
 	timer_period *= rte_get_timer_hz();
 
 	/* create the mbuf pool */
-	l2fwd_pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool", NB_MBUF,
-												 MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
-												 rte_socket_id());
+	l2fwd_pktmbuf_pool =
+		rte_pktmbuf_pool_create("mbuf_pool", NB_MBUF,
+								MEMPOOL_CACHE_SIZE, 0,
+								RTE_MBUF_DEFAULT_BUF_SIZE,
+								rte_socket_id());
 	printf("RTE_MBUF_DEFAULT_BUF_SIZE:%d\n", RTE_MBUF_DEFAULT_BUF_SIZE);
 	if (l2fwd_pktmbuf_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init mbuf pool\n");
