@@ -463,6 +463,7 @@ void TaskScheduler_tx(void *arg)
 				}
 				ServiceEN_tx[n * taskNum_tx + 1] = 0; //关闭任务添加器(n,2)
 			}
+			
 			//  1.3  packing
 			if (ServiceEN_tx[n * taskNum_tx + 2] == cbtaskNum[n] && cbtaskNum[n] != 0)
 			{ //任务添加器(n,3)打开

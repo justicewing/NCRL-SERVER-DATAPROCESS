@@ -12,7 +12,8 @@
             "includePath": [
                 "${workspaceFolder}",
                 "~/dpdk/lib",
-                "~/dpdk/x86_64-native-linuxapp-gcc/include"
+                "~/dpdk/x86_64-native-linuxapp-gcc/include",
+                "${workspaceFolder}/multi"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",

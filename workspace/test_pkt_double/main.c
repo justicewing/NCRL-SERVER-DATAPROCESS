@@ -4,8 +4,16 @@
 #define ARRAYD_SIZE 128
 #define ARRAYC_SIZE (ARRAYD_SIZE * sizeof(double) / sizeof(unsigned char))
 
+struct ts
+{
+    int *data;
+};
+
 int main()
 {
+    struct ts tss;
+    tss.data = (int *)malloc(sizeof(int) * 100);
+    printf("size of ts: %ld\n\n", sizeof(tss));
     double *arrayD;
     unsigned char *arrayC;
     double *arrayD_r;
