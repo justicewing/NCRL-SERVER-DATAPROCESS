@@ -13,7 +13,6 @@ const uint32_t BUFFSZ = 6176 * 3;
 
 const int CarrierNum = 1200;
 
-const int SymbolNum = 14;
 const int TxAntNum = 128;
 const int RxAntNum = 8;
 const int MaxBeam = 8;
@@ -21,6 +20,7 @@ const int UserNum = 1;
 const int PathNum = 6;
 const int DataSymNum = 12;
 const int PilotSymbNum = 2;
+const int SymbolNum = 14;
 
 const int CQI_mod[16] = {0, 2, 2, 2, 2, 2, 2, 4, 4, 4, 6, 6, 6, 6, 6, 6};
 const int CQI_cod[16] = {0, 78, 120, 193, 308, 449, 602, 378, 490, 616, 466, 567, 666, 772, 873, 948};
@@ -41,15 +41,6 @@ const int datasymbNum[10] = {12408, 10728, 12540, 13200, 13200, 13128, 13128, 13
 //  7 : D  13200 = 1200 * 11
 //  8 : D  13200 = 1200 * 11
 //  9 : D  13200 = 1200 * 11
-
-#define SENT_DATA_LENGTH sizeof(lapack_complex_float) * RxAntNum * CarrierNum * SymbolNum
-
-struct sent_package
-{
-	lapack_complex_float data[SENT_DATA_LENGTH];
-	int CQI[MaxBeam];
-	float SNR;
-};
 
 struct package_t
 {

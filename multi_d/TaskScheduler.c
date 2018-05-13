@@ -35,7 +35,7 @@ const int paraNum_rx = 5; // 接收端同时处理子帧上限
 const int packCache = 20; // 缓存
 const int SBNum = 50;	 // 信道估计相关
 //test
-struct package_t package_test[50];
+struct package_t package_test[20];
 lapack_complex_float *H[1];
 const int testError = 100;
 const int testTime = 100;
@@ -45,8 +45,6 @@ int packNum;
 pthread_mutex_t mutex_packNum;
 pthread_mutex_t mutex_readyNum;
 int runIndex = 0;
-
-unsigned char sent_data[sizeof(lapack_complex_float) * RxAntNum * CarrierNum * SymbolNum];
 
 void TaskScheduler_tx(void *arg)
 {
@@ -463,7 +461,7 @@ void TaskScheduler_tx(void *arg)
 				}
 				ServiceEN_tx[n * taskNum_tx + 1] = 0; //关闭任务添加器(n,2)
 			}
-			
+
 			//  1.3  packing
 			if (ServiceEN_tx[n * taskNum_tx + 2] == cbtaskNum[n] && cbtaskNum[n] != 0)
 			{ //任务添加器(n,3)打开
