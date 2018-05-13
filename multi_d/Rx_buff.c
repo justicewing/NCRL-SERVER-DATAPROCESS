@@ -4,36 +4,34 @@
 
 #define MAX_MBUFF 2 * MaxBeam * sizeof(int) + sizeof(float) + \
                       MaxBeam *CarrierNum *SymbolNum * sizeof(lapack_complex_float)
-unsigned char mbuf[MAX_MBUFF];
 
-extern int index_cache;
-extern int readyNum;
-extern const int packCache;
-extern struct package_t *package_test;
-extern pthread_mutex_t mutex_readyNum;
+extern unsigned char *mbuf;
+extern int index_write_rx;
+extern int readyNum_rx;
+extern int CacheNum_rx;
+extern struct package_t *package_rx;
+extern pthread_mutex_t mutex_readyNum_rx;
 
-int buffisEmpty = 1;
-pthread_mutex_t mutex_buffisEmpty;
+extern int buffisEmpty;
+extern pthread_mutex_t mutex_buffisEmpty;
 
-int package_to_buff(struct package_t *package, unsigned char *buff);
+int buff_to_package(struct package_t *package, unsigned char *buff);
 
 void Rx_buff(void *arg)
 {
-    pthread_mutex_init(&mutex_buffisEmpty, NULL);
     while (1)
     {
-        if (readyNum > 0 && buffisEmpty)
+        if (readyNum_rx <= CacheNum_rx && !buffisEmpty)
         {
-            package_to_buff(&package_test[index_cache], mbuf);
-            pthread_mutex_lock(&mutex_readyNum);
-            readyNum--;
-            pthread_mutex_unlock(&mutex_readyNum);
+            buff_to_package(&package_rx[index_write_rx], mbuf);
+            pthread_mutex_lock(&mutex_readyNum_rx);
+            readyNum_rx++;
+            pthread_mutex_unlock(&mutex_readyNum_rx);
             pthread_mutex_lock(&mutex_buffisEmpty);
-            buffisEmpty = 0;
+            buffisEmpty = 1;
             pthread_mutex_lock(&mutex_buffisEmpty);
         }
     }
-    pthread_mutex_destroy(&mutex_buffisEmpty);
 }
 
 int buff_to_package(struct package_t *package, unsigned char *buff)
@@ -43,14 +41,14 @@ int buff_to_package(struct package_t *package, unsigned char *buff)
 
     for (int i = 0; i < sizeof(package->tbs); i++)
     {
-        *buff = ((unsigned char *)(package->tbs))[i];
+        ((unsigned char *)(package->tbs))[i] = *buff;
         buff++;
         buff_length++;
     }
 
     for (int i = 0; i < sizeof(package->CQI_index); i++)
     {
-        *buff = ((unsigned char *)(package->tbs))[i];
+        ((unsigned char *)(package->tbs))[i] = *buff;
         buff++;
         buff_length++;
     }
@@ -64,7 +62,7 @@ int buff_to_package(struct package_t *package, unsigned char *buff)
 
     for (int i = 0; i < sizeof(package->y); i++)
     {
-        *buff = ((unsigned char *)(package->y))[i];
+        ((unsigned char *)(package->y))[i] = *buff;
         buff++;
         buff_length++;
     }
