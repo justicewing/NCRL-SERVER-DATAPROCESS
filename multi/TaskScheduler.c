@@ -9,7 +9,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include "mkl.h"
-#include "omp.h"
+// #include "omp.h"
 #include "thread_pool.h"
 #include "srslte/fec/crc.h"
 #include "srslte/fec/turbocoder.h"
@@ -722,7 +722,7 @@ void TaskScheduler_rx(void *arg){
 	for (int i = 0; i < paraNum_rx; i++) ServiceEN_rx[taskNum_rx * i] = LayerNum;
 	sem_post(&rx_signal);
 	sem_wait(&tx_signal);
-	omp_set_num_threads(1);
+	// omp_set_num_threads(1);
 	if(TIME_EN == 1) gettimeofday(&rx_begin, NULL);//--------------------rx
 	while(1){
 		//sleep(1);

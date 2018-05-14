@@ -2,20 +2,20 @@
 #include <mkl.h>
 #include <pthread.h>
 
-#define MAX_MBUFF 2 * MaxBeam * sizeof(int) + sizeof(float) + \
-                      MaxBeam *CarrierNum *SymbolNum * sizeof(lapack_complex_float)
 unsigned char mbuf[MAX_MBUFF];
 
 int index_read_tx;
 extern int readyNum_tx;
+extern int startNum_tx;
 extern const int packCache_tx;
 extern struct package_t *package_tx;
 extern pthread_mutex_t mutex_readyNum_tx;
+extern pthread_mutex_t mutex_startNum_tx;
 
 int buffisEmpty = 1;
 pthread_mutex_t mutex_buffisEmpty;
 
-int package_to_buff(struct package_t *package, unsigned char *buff);
+int package_to_buff(struct package_t *package, unsigned char *buff_p);
 
 void Tx_buff(void *arg)
 {
@@ -32,6 +32,9 @@ void Tx_buff(void *arg)
             pthread_mutex_lock(&mutex_readyNum_tx);
             readyNum_tx--;
             pthread_mutex_unlock(&mutex_readyNum_tx);
+            pthread_mutex_lock(&mutex_startNum_tx);
+            startNum_tx--;
+            pthread_mutex_unlock(&mutex_startNum_tx);
             pthread_mutex_lock(&mutex_buffisEmpty);
             buffisEmpty = 0;
             pthread_mutex_lock(&mutex_buffisEmpty);
@@ -47,31 +50,39 @@ int package_to_buff(struct package_t *package, unsigned char *buff)
 
     for (int i = 0; i < sizeof(package->tbs); i++)
     {
-        *buff = ((unsigned char *)(package->tbs))[i];
-        buff++;
+        *buff_p = ((unsigned char *)(package->tbs))[i];
+        buff_p++;
         buff_length++;
     }
 
     for (int i = 0; i < sizeof(package->CQI_index); i++)
     {
-        *buff = ((unsigned char *)(package->tbs))[i];
-        buff++;
+        *buff_p = ((unsigned char *)(package->tbs))[i];
+        buff_p++;
         buff_length++;
     }
 
     for (int i = 0; i < sizeof(&(package->SNR)); i++)
     {
-        *buff = ((unsigned char *)(&(package->SNR)))[i];
-        buff++;
+        *buff_p = ((unsigned char *)(&(package->SNR)))[i];
+        buff_p++;
         buff_length++;
     }
 
     for (int i = 0; i < sizeof(package->y); i++)
     {
-        *buff = ((unsigned char *)(package->y))[i];
-        buff++;
+        *buff_p = ((unsigned char *)(package->y))[i];
+        buff_p++;
         buff_length++;
     }
+
+    for (int j = 0; j < MaxBeam; j++)
+        for (int i = 0; i < sizeof(package->data[j]); i++)
+        {
+            *buff_p = ((unsigned char *)(package->data[j]))[i];
+            buff_p++;
+            buff_length++;
+        }
 
     return buff_length;
 }

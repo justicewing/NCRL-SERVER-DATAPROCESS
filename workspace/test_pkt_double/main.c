@@ -4,6 +4,11 @@
 #define ARRAYD_SIZE 128
 #define ARRAYC_SIZE (ARRAYD_SIZE * sizeof(double) / sizeof(unsigned char))
 
+int const size = 10;
+const int paraNum_tx = 2;
+const int MaxBeam = 2;
+
+
 struct ts
 {
     int *data;
@@ -11,6 +16,7 @@ struct ts
 
 int main()
 {
+    int data_len_tx[paraNum_tx][MaxBeam];
     struct ts tss;
     tss.data = (int *)malloc(sizeof(int) * 100);
     printf("size of ts: %ld\n\n", sizeof(tss));
