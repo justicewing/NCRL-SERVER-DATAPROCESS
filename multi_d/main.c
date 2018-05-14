@@ -33,6 +33,12 @@ pthread_mutex_t mutex3_rx;
 /* 声明信号量 */
 sem_t tx_can_be_destroyed;
 sem_t rx_can_be_destroyed;
+sem_t tx_buff_can_be_destroyed;
+sem_t rx_buff_can_be_destroyed;
+sem_t tx_is_ready;
+sem_t rx_is_ready;
+sem_t tx_buff_is_ready;
+sem_t rx_buff_is_ready;
 
 static void signal_handler(int signum);
 
@@ -49,25 +55,30 @@ int main()
 	/* 初始化信号量 */
 	sem_init(&tx_can_be_destroyed, 0, 0);
 	sem_init(&rx_can_be_destroyed, 0, 0);
+	sem_init(&tx_buff_can_be_destroyed, 0, 0);
+	sem_init(&rx_buff_can_be_destroyed, 0, 0);
+	sem_init(&tx_is_ready, 0, 0);
+	sem_init(&rx_is_ready, 0, 0);
+	sem_init(&tx_buff_is_ready, 0, 0);
+	sem_init(&rx_buff_is_ready, 0, 0);
 
 	/* 初始化线程池 */
 	pool_init(0, 1, 0);
 	printf("creat pool 0...\n");
 	pool_init(1, 1, 1);
 	printf("creat pool 1...\n");
-	pool_init(2, threadNum_tx, 2);
+	pool_init(2, 1, 2);
 	printf("creat pool 2...\n");
-	pool_init(2 + threadNum_tx, threadNum_rx, 3);
+	pool_init(3, 1, 3);
 	printf("creat pool 3...\n");
+	pool_init(4, threadNum_tx, 4);
+	printf("creat pool 4...\n");
+	pool_init(4 + threadNum_tx, threadNum_rx, 5);
+	printf("creat pool 5...\n");
 
-	force_quit = false;
-	signal(SIGINT, signal_handler);
-	signal(SIGTERM, signal_handler);
-
-	/* 创建buff线程 */
-	pthread_t thread_Tx_buff, thread_Rx_buff;
-	pthread_create(&thread_Tx_buff, 0, &Tx_buff, 0);
-	pthread_create(&thread_Rx_buff, 0, &Rx_buff, 0);
+	// force_quit = false;
+	// signal(SIGINT, signal_handler);
+	// signal(SIGTERM, signal_handler);
 
 	/* 添加发送端主任务 */
 	pool_add_task(TaskScheduler_tx, NULL, 0);
@@ -75,20 +86,30 @@ int main()
 	/* 添加接收端主任务 */
 	pool_add_task(TaskScheduler_rx, NULL, 1);
 	printf("add rx taskScheduler to pool 1...\n");
+	pool_add_task(Tx_buff, NULL, 2);
+	printf("add rx taskScheduler to pool 2...\n");
+	pool_add_task(Rx_buff, NULL, 3);
+	printf("add rx taskScheduler to pool 3...\n");
 
 	/* 等待信号销毁线程 */
 	sem_wait(&tx_can_be_destroyed);
 	pool_destroy(0);
 	sem_wait(&rx_can_be_destroyed);
 	pool_destroy(1);
-
-	/* 终止buff线程 */
-	pthread_join(thread_Tx_buff,0);
-	pthread_join(thread_Rx_buff,0);
+	sem_wait(&tx_buff_can_be_destroyed);
+	pool_destroy(4);
+	sem_wait(&rx_buff_can_be_destroyed);
+	pool_destroy(5);
 
 	/* 销毁信号量*/
 	sem_destroy(&tx_can_be_destroyed);
 	sem_destroy(&rx_can_be_destroyed);
+	sem_destroy(&tx_buff_can_be_destroyed);
+	sem_destroy(&rx_buff_can_be_destroyed);
+	sem_destroy(&tx_is_ready);
+	sem_destroy(&rx_is_ready);
+	sem_destroy(&tx_buff_is_ready);
+	sem_destroy(&rx_buff_is_ready);
 
 	return 0;
 }
