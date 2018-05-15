@@ -29,8 +29,8 @@ pthread_mutex_t mutex3_rx;
 sem_t tx_can_be_destroyed;
 sem_t rx_can_be_destroyed;
 //test
-sem_t tx_signal;
-sem_t rx_signal;
+sem_t tx_prepared;
+sem_t rx_prepared;
 
 int main(){
 	
@@ -44,8 +44,8 @@ int main(){
 	/* 初始化信号量 */
 	sem_init(&tx_can_be_destroyed, 0, 0);
 	sem_init(&rx_can_be_destroyed, 0, 0);
-	sem_init(&tx_signal,0,0);
-	sem_init(&rx_signal,0,0);
+	sem_init(&tx_prepared,0,0);
+	sem_init(&rx_prepared,0,0);
 	
 	/* 初始化线程池 */
 	pool_init(0, 1, 0);printf("creat pool 0...\n");
