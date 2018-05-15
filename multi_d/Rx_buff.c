@@ -21,7 +21,7 @@ int buff_to_package(struct package_t *package, unsigned char *buff_p);
 
 void Rx_buff(void *arg)
 {
-    printf("rx buff start\n");
+    // printf("rx buff start\n");
     for (int p = 0; p < CacheNum_rx; p++)
     {
         package_rx[p].tbs = (int *)malloc(sizeof(int) * MAX_BEAM);
@@ -35,6 +35,7 @@ void Rx_buff(void *arg)
     printf("rx buff is ready...\n");
     sem_post(&rx_buff_is_ready);
     sem_wait(&rx_is_ready);
+    printf("rx buff start\n");
     while (1)
     {
         if (readyNum_rx <= CacheNum_rx && !buffisEmpty)

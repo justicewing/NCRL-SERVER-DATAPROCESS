@@ -24,12 +24,13 @@ int package_to_buff(struct package_t *package, unsigned char *buff_p);
 
 void Tx_buff(void *arg)
 {
-    printf("tx buff start\n");
+    // printf("tx buff start\n");
     index_read_tx = 0;
     pthread_mutex_init(&mutex_buffisEmpty, NULL);
     printf("tx buff is ready...\n");
     sem_post(&tx_buff_is_ready);
     sem_wait(&tx_is_ready);
+    printf("tx buff start\n");
     while (1)
     {
         if (readyNum_tx > 0 && buffisEmpty)

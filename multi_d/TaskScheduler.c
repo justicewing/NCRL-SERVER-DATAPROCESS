@@ -24,6 +24,8 @@
 
 #define LAYER_NUM 8
 #define CQI_INDEX 15
+#define TX_POOL_ID 4
+#define RX_POOL_ID 5 
 
 /* 来自config.h的难民数组 */
 const int CQI_mod[16] = {0, 2, 2, 2, 2, 2, 2, 4, 4, 4, 6, 6, 6, 6, 6, 6};
@@ -67,7 +69,7 @@ int runIndex = 0;
 
 void TaskScheduler_tx(void *arg)
 {
-	printf("tx start\n");
+	// printf("tx start\n");
 
 	//--------------------Set the initial parameters--------------------
 	readyNum_tx = 0, startNum_tx = 0;
@@ -357,6 +359,7 @@ void TaskScheduler_tx(void *arg)
 	printf("TaskScheduler tx prepared...\n");
 	sem_post(&tx_is_ready);
 	sem_wait(&tx_buff_is_ready);
+	printf("tx start\n");
 	//--------------------Data processing--------------------
 	ServiceEN_tx = (int *)malloc(sizeof(int) * paraNum_tx * TASK_NUM_TX);
 	for (int i = 0; i < paraNum_tx; i++)
@@ -415,7 +418,7 @@ void TaskScheduler_tx(void *arg)
 					crc_cbsegm_args[j].ServiceEN = ServiceEN_tx;
 					crc_cbsegm_args[j].ServiceEN_index = n * TASK_NUM_TX + 1;
 
-					pool_add_task(crc_cbsegm, (void *)&crc_cbsegm_args[j], 2);
+					pool_add_task(crc_cbsegm, (void *)&crc_cbsegm_args[j], TX_POOL_ID);
 				}
 				ServiceEN_tx[n * TASK_NUM_TX] = 0; //关闭任务添加器(n,1)
 			}
@@ -472,7 +475,7 @@ void TaskScheduler_tx(void *arg)
 						crc_mod_args[jp].ServiceEN = ServiceEN_tx;
 						crc_mod_args[jp].ServiceEN_index = n * TASK_NUM_TX + 2;
 
-						pool_add_task(crc_mod, (void *)&crc_mod_args[jp], 2);
+						pool_add_task(crc_mod, (void *)&crc_mod_args[jp], TX_POOL_ID);
 					}
 				}
 				ServiceEN_tx[n * TASK_NUM_TX + 1] = 0; //关闭任务添加器(n,2)
@@ -642,7 +645,7 @@ void TaskScheduler_tx(void *arg)
 
 void TaskScheduler_rx(void *arg)
 {
-	printf("rx start\n");
+	// printf("rx start\n");
 
 	//--------------------Initialize parameters--------------------
 	//-----simulation-----
@@ -829,9 +832,11 @@ void TaskScheduler_rx(void *arg)
 	int BLER_EN = 1, BER_EN = 1;
 	int TIME_EN = 1;
 
-	sem_post(&rx_is_ready);
-	sem_wait(&rx_buff_is_ready);
 	printf("TaskScheduler rx prepared...\n");
+	sem_post(&rx_is_ready);
+	sem_wait(&rx_buff_is_ready);	
+	printf("rx start\n");
+
 	int count_ms = 0, count_s = 0, TIME = 0;
 	//-----time test-----
 	struct timeval rx_begin, rx_end;
@@ -920,7 +925,7 @@ void TaskScheduler_rx(void *arg)
 					chest_calsym_args[j].ServiceEN_index = n * TASK_NUM_RX + 1;
 					chest_calsym_args[j].ServiceEN_rx = ServiceEN_rx;
 
-					pool_add_task(chest_calsym, (void *)&chest_calsym_args[j], 3);
+					pool_add_task(chest_calsym, (void *)&chest_calsym_args[j], RX_POOL_ID);
 				}
 				ServiceEN_rx[n * TASK_NUM_RX] = 0;
 				//printf("\nrx%d get package %d", n, index_write_tx);
@@ -998,7 +1003,7 @@ void TaskScheduler_rx(void *arg)
 						derm_crc_args[jp].ServiceEN_index = n * TASK_NUM_RX + 2;
 						derm_crc_args[jp].ServiceEN_rx = ServiceEN_rx;
 
-						pool_add_task(derm_crc, (void *)&derm_crc_args[jp], 3);
+						pool_add_task(derm_crc, (void *)&derm_crc_args[jp], RX_POOL_ID);
 					}
 				}
 				ServiceEN_rx[n * TASK_NUM_RX + 1] = 0;
@@ -1027,7 +1032,7 @@ void TaskScheduler_rx(void *arg)
 					crc_check_args[j].subframeIndex = n;
 					crc_check_args[j].BERsignal = BERsignal;
 
-					pool_add_task(crc_check, (void *)&crc_check_args[j], 3);
+					pool_add_task(crc_check, (void *)&crc_check_args[j], RX_POOL_ID);
 				}
 				ServiceEN_rx[n * TASK_NUM_RX + 2] = 0;
 				cbtaskNum[n] = 0;
