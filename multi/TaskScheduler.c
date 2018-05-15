@@ -21,7 +21,7 @@
 #include "derm_crc.h"
 #include "crc_check.h"
 #include "config.h"
-#define LAYER_NUM 8
+#define LAYER_NUM 4
 #define CQI_INDEX 15
 int *ServiceEN_tx;
 int *ServiceEN_rx;
@@ -43,6 +43,14 @@ int packNum;
 pthread_mutex_t mutex_packNum;
 pthread_mutex_t mutex_readyNum;
 int runIndex = 0;
+
+const int CQI_mod[16] = {0, 2, 2, 2, 2, 2, 2, 4, 4, 4, 6, 6, 6, 6, 6, 6};
+const int CQI_cod[16] = {0, 78, 120, 193, 308, 449, 602, 378, 490, 616, 466, 567, 666, 772, 873, 948};
+const float CQI_mapping_table_LS[15] = {3, 4, 5, 7, 8, 9, 13, 14, 16, 17, 19, 20, 22, 24, 27};
+const float CQI_mapping_table_DCT[15] = {-4, -2, -1, 1, 3, 5, 8, 9, 11, 14, 16, 17, 19, 21, 24};
+const int datasymbNum[10] = {12408, 10728, 12540, 13200, 13200, 13128, 13128, 13200, 13200, 13200};
+
+
 void TaskScheduler_tx(void *arg)
 {
 
@@ -52,24 +60,24 @@ void TaskScheduler_tx(void *arg)
 	pthread_mutex_init(&mutex_readyNum, NULL);
 	for (int p = 0; p < packCache; p++)
 	{
-		package_test[p].tbs = (int *)malloc(sizeof(int) * MaxBeam);
-		package_test[p].CQI_index = (int *)malloc(sizeof(int) * MaxBeam);
+		package_test[p].tbs = (int *)malloc(sizeof(int) * MAX_BEAM);
+		package_test[p].CQI_index = (int *)malloc(sizeof(int) * MAX_BEAM);
 	}
 	uint32_t seed = 1;
 	int k = 0, t = 0;
 	//seed = time(NULL);
 	srand(seed);
 	int LayerNum = LAYER_NUM;
-	int *CQI_index = (int *)malloc(sizeof(int) * MaxBeam * packCache);
+	int *CQI_index = (int *)malloc(sizeof(int) * MAX_BEAM * packCache);
 	for (int i = 0; i < packCache; i++)
 	{
-		for (int j = 0; j < MaxBeam; j++)
+		for (int j = 0; j < MAX_BEAM; j++)
 		{
-			CQI_index[i * MaxBeam + j] = CQI_INDEX;
+			CQI_index[i * MAX_BEAM + j] = CQI_INDEX;
 		}
 	}
 	int inter_freq = LayerNum;
-	while (CarrierNum / SBNum % inter_freq != 0)
+	while (CARRIER_NUM / SBNum % inter_freq != 0)
 		inter_freq++;
 
 	float SNR_MIN = 15, SNR_MAX = 15, STEP = 1.0;
@@ -82,73 +90,73 @@ void TaskScheduler_tx(void *arg)
 	int bitsNum = 0;
 	int TIME_EN = 0;
 	//  1.0  Generate data
-	int data_len_tx[paraNum_tx][MaxBeam];
-	uint8_t *data_tx[paraNum_tx][MaxBeam];
-	uint8_t *data_bytes_tx[paraNum_tx][MaxBeam];
-	int max_symbol_num = CarrierNum * DataSymNum;
-	int max_data_len_tx = CQI_cod[15] / 1024.0 * max_symbol_num * CQI_mod[15] - crc_length;
+	int data_len_tx[paraNum_tx][MAX_BEAM];
+	uint8_t *data_tx[paraNum_tx][MAX_BEAM];
+	uint8_t *data_bytes_tx[paraNum_tx][MAX_BEAM];
+	int max_symbol_num = CARRIER_NUM * DATA_SYM_NUM;
+	int max_data_len_tx = CQI_cod[15] / 1024.0 * max_symbol_num * CQI_mod[15] - CRC_LENGTH;
 	for (int i = 0; i < paraNum_tx; i++)
 	{
-		for (int j = 0; j < MaxBeam; j++)
+		for (int j = 0; j < MAX_BEAM; j++)
 		{
-			data_tx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * (max_data_len_tx + crc_length));
-			data_bytes_tx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * (max_data_len_tx + crc_length) / 8);
+			data_tx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * (max_data_len_tx + CRC_LENGTH));
+			data_bytes_tx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * (max_data_len_tx + CRC_LENGTH) / 8);
 		}
 	}
 	for (int p = 0; p < packCache; p++)
 	{
-		for (int j = 0; j < MaxBeam; j++)
+		for (int j = 0; j < MAX_BEAM; j++)
 		{
-			package_test[p].data[j] = (uint8_t *)malloc(sizeof(uint8_t) * max_data_len_tx + crc_length);
+			package_test[p].data[j] = (uint8_t *)malloc(sizeof(uint8_t) * max_data_len_tx + CRC_LENGTH);
 		}
 	}
 	//--------------------The preparation of the TX--------------------
 
 	//  1.1  crc attach - code block segmentation
-	struct crc_cbsegm_args_t *crc_cbsegm_args = (struct crc_cbsegm_args_t *)malloc(sizeof(struct crc_cbsegm_args_t) * paraNum_tx * MaxBeam);
-	srslte_crc_t *crc_tb[paraNum_tx][MaxBeam];
-	srslte_cbsegm_t *cb_tx[paraNum_tx][MaxBeam];
+	struct crc_cbsegm_args_t *crc_cbsegm_args = (struct crc_cbsegm_args_t *)malloc(sizeof(struct crc_cbsegm_args_t) * paraNum_tx * MAX_BEAM);
+	srslte_crc_t *crc_tb[paraNum_tx][MAX_BEAM];
+	srslte_cbsegm_t *cb_tx[paraNum_tx][MAX_BEAM];
 	for (int i = 0; i < paraNum_tx; i++)
 	{
-		for (int j = 0; j < MaxBeam; j++)
+		for (int j = 0; j < MAX_BEAM; j++)
 		{
 			crc_tb[i][j] = (srslte_crc_t *)malloc(sizeof(srslte_crc_t));
-			srslte_crc_init(crc_tb[i][j], crc_24A, crc_length);
+			srslte_crc_init(crc_tb[i][j], CRC_24A, CRC_LENGTH);
 			cb_tx[i][j] = (srslte_cbsegm_t *)malloc(sizeof(srslte_cbsegm_t));
 		}
 	}
 	printf("TX task1 initialized \n");
 	//  1.2  crc attach - turbo coding - rate matching - code block concatenation
-	const int cbNum = (max_data_len_tx + crc_length) / 6144 + 1;
-	srslte_crc_t *crc_cb[paraNum_tx][MaxBeam * cbNum];
+	const int cbNum = (max_data_len_tx + CRC_LENGTH) / 6144 + 1;
+	srslte_crc_t *crc_cb[paraNum_tx][MAX_BEAM * cbNum];
 	for (int i = 0; i < paraNum_tx; i++)
 	{
-		for (int j = 0; j < MaxBeam * cbNum; j++)
+		for (int j = 0; j < MAX_BEAM * cbNum; j++)
 		{
 			crc_cb[i][j] = (srslte_crc_t *)malloc(sizeof(srslte_crc_t));
-			srslte_crc_init(crc_cb[i][j], crc_24B, crc_length);
+			srslte_crc_init(crc_cb[i][j], CRC_24B, CRC_LENGTH);
 		}
 	}
-	struct crc_mod_args_t *crc_mod_args = (struct crc_mod_args_t *)malloc(sizeof(struct crc_mod_args_t) * paraNum_tx * MaxBeam * cbNum);
-	uint8_t *cr_data_bytes_tx[paraNum_tx][MaxBeam * cbNum];
-	srslte_tcod_t *tcod[paraNum_tx][MaxBeam * cbNum];
-	uint8_t *cr_tcod_data_tx[paraNum_tx][MaxBeam * cbNum];
-	uint8_t *cr_rm_data_tx[paraNum_tx][MaxBeam * cbNum];
-	uint8_t *cr_rm_data_bytes_tx[paraNum_tx][MaxBeam * cbNum];
-	uint8_t *w_buff_tx[paraNum_tx][MaxBeam * cbNum];
-	uint8_t *parity_bytes[paraNum_tx][MaxBeam * cbNum];
-	uint8_t *rm_data_tx[paraNum_tx][MaxBeam];
-	uint32_t rm_data_len_tx[paraNum_tx][MaxBeam];
-	uint32_t rm_outlen_tx[paraNum_tx][MaxBeam * cbNum];
+	struct crc_mod_args_t *crc_mod_args = (struct crc_mod_args_t *)malloc(sizeof(struct crc_mod_args_t) * paraNum_tx * MAX_BEAM * cbNum);
+	uint8_t *cr_data_bytes_tx[paraNum_tx][MAX_BEAM * cbNum];
+	srslte_tcod_t *tcod[paraNum_tx][MAX_BEAM * cbNum];
+	uint8_t *cr_tcod_data_tx[paraNum_tx][MAX_BEAM * cbNum];
+	uint8_t *cr_rm_data_tx[paraNum_tx][MAX_BEAM * cbNum];
+	uint8_t *cr_rm_data_bytes_tx[paraNum_tx][MAX_BEAM * cbNum];
+	uint8_t *w_buff_tx[paraNum_tx][MAX_BEAM * cbNum];
+	uint8_t *parity_bytes[paraNum_tx][MAX_BEAM * cbNum];
+	uint8_t *rm_data_tx[paraNum_tx][MAX_BEAM];
+	uint32_t rm_data_len_tx[paraNum_tx][MAX_BEAM];
+	uint32_t rm_outlen_tx[paraNum_tx][MAX_BEAM * cbNum];
 	uint32_t max_rm_data_len_tx = max_symbol_num * CQI_mod[15];
 	uint32_t Lamda;
 	int max_mod_data_len_tx = max_rm_data_len_tx / CQI_mod[1];
-	int cr_symnum_tx[paraNum_tx][MaxBeam * cbNum];
-	int SymbolBitN[paraNum_tx][MaxBeam];
+	int cr_symnum_tx[paraNum_tx][MAX_BEAM * cbNum];
+	int SymbolBitN[paraNum_tx][MAX_BEAM];
 	lapack_complex_float *modsymb[paraNum_tx];
 	for (int i = 0; i < paraNum_tx; i++)
 	{
-		for (int j = 0; j < MaxBeam * cbNum; j++)
+		for (int j = 0; j < MAX_BEAM * cbNum; j++)
 		{
 			cr_data_bytes_tx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * SRSLTE_TCOD_MAX_LEN_CB / 8);
 			tcod[i][j] = (srslte_tcod_t *)malloc(sizeof(srslte_tcod_t));
@@ -159,11 +167,11 @@ void TaskScheduler_tx(void *arg)
 			w_buff_tx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * 6176 * 3);
 			parity_bytes[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * (6148 * 2 / 8 + 1));
 		}
-		modsymb[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MaxBeam * CarrierNum * SymbolNum);
+		modsymb[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MAX_BEAM * CARRIER_NUM * SYMBOL_NUM);
 	}
 	for (int i = 0; i < paraNum_tx; i++)
 	{
-		for (int j = 0; j < MaxBeam; j++)
+		for (int j = 0; j < MAX_BEAM; j++)
 		{
 			rm_data_tx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * max_rm_data_len_tx);
 		}
@@ -188,14 +196,14 @@ void TaskScheduler_tx(void *arg)
 	lapack_complex_float *x[packCache];
 	for (int i = 0; i < packCache; i++)
 	{
-		x[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MaxBeam * CarrierNum * SymbolNum);
+		x[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MAX_BEAM * CARRIER_NUM * SYMBOL_NUM);
 	}
 	int p = 0;
-	lapack_complex_float *PilotSymb[MaxBeam];
-	for (int i = 0; i < MaxBeam; i++)
+	lapack_complex_float *PilotSymb[MAX_BEAM];
+	for (int i = 0; i < MAX_BEAM; i++)
 	{
-		PilotSymb[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * (i + 1) * CarrierNum * PilotSymbNum);
-		CalPilotSymb(i + 1, CarrierNum, 2, 1, inter_freq, PilotSymb[i]);
+		PilotSymb[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * (i + 1) * CARRIER_NUM * PILOT_SYM_NUM);
+		CalPilotSymb(i + 1, CARRIER_NUM, 2, 1, inter_freq, PilotSymb[i]);
 	}
 
 	//--------------------Loading channel information--------------------
@@ -211,7 +219,7 @@ void TaskScheduler_tx(void *arg)
 	//int H_layer[8] = {66,67,68,65,69,64,70,63};//3
 	//int H_layer[8] = {63,64,65,66,67,68,69,70};
 
-	lapack_complex_float *channel = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum * TxAntNum * CarrierNum * SymbolNum * channelNum);
+	lapack_complex_float *channel = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RX_ANT_NUM * TX_ANT_NUM * CARRIER_NUM * SYMBOL_NUM * channelNum);
 	FILE *fp_hr;
 	fp_hr = fopen("channel/H_real2.txt", "r");
 	if (!fp_hr)
@@ -241,19 +249,19 @@ void TaskScheduler_tx(void *arg)
 
 	for (int t = 0; t < channelNum; t++)
 	{
-		H[t] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum * MaxBeam * CarrierNum * SymbolNum);
+		H[t] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RX_ANT_NUM * MAX_BEAM * CARRIER_NUM * SYMBOL_NUM);
 	}
 	for (int t = 0; t < channelNum; t++)
 	{
-		for (int ns = 0; ns < SymbolNum; ns++)
+		for (int ns = 0; ns < SYMBOL_NUM; ns++)
 		{
-			for (int nc = 0; nc < CarrierNum; nc++)
+			for (int nc = 0; nc < CARRIER_NUM; nc++)
 			{
 				for (int nl = 0; nl < LayerNum; nl++)
 				{
-					for (int nr = 0; nr < RxAntNum; nr++)
+					for (int nr = 0; nr < RX_ANT_NUM; nr++)
 					{
-						H[t][ns * CarrierNum * LayerNum * RxAntNum + nc * LayerNum * RxAntNum + nl * RxAntNum + nr] = channel[t * RxAntNum * TxAntNum * CarrierNum * SymbolNum + ns * CarrierNum * TxAntNum * RxAntNum + nc * TxAntNum * RxAntNum + H_layer[nl] * RxAntNum + nr];
+						H[t][ns * CARRIER_NUM * LayerNum * RX_ANT_NUM + nc * LayerNum * RX_ANT_NUM + nl * RX_ANT_NUM + nr] = channel[t * RX_ANT_NUM * TX_ANT_NUM * CARRIER_NUM * SYMBOL_NUM + ns * CARRIER_NUM * TX_ANT_NUM * RX_ANT_NUM + nc * TX_ANT_NUM * RX_ANT_NUM + H_layer[nl] * RX_ANT_NUM + nr];
 					}
 				}
 			}
@@ -266,7 +274,7 @@ void TaskScheduler_tx(void *arg)
 	fp_nr = fopen("channel/wgnr.txt", "r");
 	FILE *fp_ni;
 	fp_ni = fopen("channel/wgni.txt", "r");
-	lapack_complex_float *gwn = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum * CarrierNum * SymbolNum);
+	lapack_complex_float *gwn = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RX_ANT_NUM * CARRIER_NUM * SYMBOL_NUM);
 	m = 0;
 	while (!feof(fp_nr))
 	{
@@ -285,19 +293,19 @@ void TaskScheduler_tx(void *arg)
 	printf("Channel loading is finished...\n");
 
 	//Through the channel
-	lapack_complex_float *H_temp = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum * MaxBeam);
-	lapack_complex_float *x_temp = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MaxBeam * 1);
-	lapack_complex_float *y_temp = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum * 1);
+	lapack_complex_float *H_temp = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RX_ANT_NUM * MAX_BEAM);
+	lapack_complex_float *x_temp = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MAX_BEAM * 1);
+	lapack_complex_float *y_temp = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RX_ANT_NUM * 1);
 	lapack_complex_float *y[packCache];
 	for (int i = 0; i < packCache; i++)
 	{
-		y[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum * CarrierNum * SymbolNum);
+		y[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RX_ANT_NUM * CARRIER_NUM * SYMBOL_NUM);
 	}
 
 	const CBLAS_LAYOUT Layout = CblasColMajor;
 	const CBLAS_TRANSPOSE transa = CblasNoTrans;
 	const CBLAS_TRANSPOSE transb = CblasNoTrans;
-	const MKL_INT _m = RxAntNum;
+	const MKL_INT _m = RX_ANT_NUM;
 	const MKL_INT _n = 1;
 	const MKL_INT _k = LayerNum;
 	lapack_complex_float alpha;
@@ -318,7 +326,7 @@ void TaskScheduler_tx(void *arg)
 			srand(seed);
 			for (int i = 0; i < LayerNum; i++)
 			{
-				data_len_tx[k][i] = CQI_cod[CQI_index[k * MaxBeam + i]] / 1024.0 * max_symbol_num * CQI_mod[CQI_index[k * MaxBeam + i]] - crc_length;
+				data_len_tx[k][i] = CQI_cod[CQI_index[k * MAX_BEAM + i]] / 1024.0 * max_symbol_num * CQI_mod[CQI_index[k * MAX_BEAM + i]] - CRC_LENGTH;
 				//data_len_tx[k][i] = (rand() % (data_len_tx[k][i] / 8) + 1) * 8;
 				//data_len_tx[k][i] = (rand() % 10 + 1) * 10;
 				//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
@@ -339,16 +347,16 @@ void TaskScheduler_tx(void *arg)
 	sem_post(&tx_signal);
 	sem_wait(&rx_signal);
 	//--------------------Data processing--------------------
-	ServiceEN_tx = (int *)malloc(sizeof(int) * paraNum_tx * taskNum_tx);
+	ServiceEN_tx = (int *)malloc(sizeof(int) * paraNum_tx * TASK_NUM_TX);
 	for (int i = 0; i < paraNum_tx; i++)
 	{
-		for (int j = 0; j < taskNum_tx; j++)
+		for (int j = 0; j < TASK_NUM_TX; j++)
 		{
-			ServiceEN_tx[i * taskNum_tx + j] = 0;
+			ServiceEN_tx[i * TASK_NUM_TX + j] = 0;
 		}
 	}
 	for (int i = 0; i < paraNum_tx; i++)
-		ServiceEN_tx[taskNum_tx * i] = 1;
+		ServiceEN_tx[TASK_NUM_TX * i] = 1;
 	if (TIME_EN == 1)
 		gettimeofday(&tx_begin, NULL); //--------------------rx
 
@@ -359,7 +367,7 @@ void TaskScheduler_tx(void *arg)
 		for (int n = 0; n < paraNum_tx; n++)
 		{
 			//  1.1  crc attach - code block segmentation
-			if (packNum < packCache && ServiceEN_tx[n * taskNum_tx] == 1)
+			if (packNum < packCache && ServiceEN_tx[n * TASK_NUM_TX] == 1)
 			{ //有数据需要发送，且任务添加器(n,1)打开
 				pthread_mutex_lock(&mutex_packNum);
 				packNum++;
@@ -369,8 +377,8 @@ void TaskScheduler_tx(void *arg)
 					// get new original data
 					for (int i = 0; i < LayerNum; i++)
 					{
-						//CQI_index[n * MaxBeam + i] = rand()%15+1;
-						data_len_tx[n][i] = (int)(CQI_cod[CQI_index[i]] / 1024.0 * max_symbol_num * CQI_mod[CQI_index[i]] - crc_length) / 8 * 8;
+						//CQI_index[n * MAX_BEAM + i] = rand()%15+1;
+						data_len_tx[n][i] = (int)(CQI_cod[CQI_index[i]] / 1024.0 * max_symbol_num * CQI_mod[CQI_index[i]] - CRC_LENGTH) / 8 * 8;
 						//data_len_tx[n][i] = (rand() % (data_len_tx[n][i] / 8) + 1) * 8;
 						//data_len_tx[k][i] = (rand() % 10 + 1) * 10;
 						//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
@@ -385,42 +393,42 @@ void TaskScheduler_tx(void *arg)
 
 				for (int i = 0; i < LayerNum; i++)
 				{
-					int j = n * MaxBeam + i;
+					int j = n * MAX_BEAM + i;
 					crc_cbsegm_args[j].crc_p = crc_tb[n][i];
-					crc_cbsegm_args[j].crc_poly = crc_24A;
-					crc_cbsegm_args[j].crc_length = crc_length;
+					crc_cbsegm_args[j].crc_poly = CRC_24A;
+					crc_cbsegm_args[j].crc_length = CRC_LENGTH;
 					crc_cbsegm_args[j].tbs = data_len_tx[n][i];
 					crc_cbsegm_args[j].tb = data_bytes_tx[n][i];
 					crc_cbsegm_args[j].cb_tx = cb_tx[n][i];
-					printf("j=%d,->C=%d\n", j, crc_cbsegm_args[j].cb_tx);
+					// printf("j=%d,->C=%d\n", j, crc_cbsegm_args[j].cb_tx);
 
 					crc_cbsegm_args[j].ServiceEN = ServiceEN_tx;
-					crc_cbsegm_args[j].ServiceEN_index = n * taskNum_tx + 1;
+					crc_cbsegm_args[j].ServiceEN_index = n * TASK_NUM_TX + 1;
 
 					pool_add_task(crc_cbsegm, (void *)&crc_cbsegm_args[j], 2);
 				}
-				ServiceEN_tx[n * taskNum_tx] = 0; //关闭任务添加器(n,1)
+				ServiceEN_tx[n * TASK_NUM_TX] = 0; //关闭任务添加器(n,1)
 			}
 
 			//  1.2  crc attach - turbo coding - rate matching - code block concatenation
-			if (ServiceEN_tx[n * taskNum_tx + 1] == LayerNum)
+			if (ServiceEN_tx[n * TASK_NUM_TX + 1] == LayerNum)
 			{ //任务添加器(n,2)打开
-				for (int i = 0; i < 2; i++)
-					for (int j = 0; j < 8; j++)
-					{
-						printf("C[%d][%d]=%d\n", i, j, cb_tx[i][j]->C);
-						printf("arg->C[%d][%d]=%d\n", i, j, crc_cbsegm_args[n * 8 + j].cb_tx->C);
-					}
-				for (int i = 0; i < 6; i++)
-					printf("ServiceEN_tx[%d]=%d\n", i, ServiceEN_tx[i]);
-				exit(0);
+				// for (int i = 0; i < 2; i++)
+				// 	for (int j = 0; j < 8; j++)
+				// 	{
+				// 		printf("C[%d][%d]=%d\n", i, j, cb_tx[i][j]->C);
+				// 		printf("arg->C[%d][%d]=%d\n", i, j, crc_cbsegm_args[n * 8 + j].cb_tx->C);
+				// 	}
+				// for (int i = 0; i < 6; i++)
+				// 	printf("ServiceEN_tx[%d]=%d\n", i, ServiceEN_tx[i]);
+				// exit(0);
 
 				int s = 0;
 				cbtaskNum[n] = 0;
 				for (int i = 0; i < LayerNum; i++)
 				{
 					cbtaskNum[n] += cb_tx[n][i]->C;
-					rm_data_len_tx[n][i] = max_symbol_num * CQI_mod[CQI_index[n * MaxBeam + i]];
+					rm_data_len_tx[n][i] = max_symbol_num * CQI_mod[CQI_index[n * MAX_BEAM + i]];
 					Lamda = max_symbol_num % cb_tx[n][i]->C;
 					// printf("C:%d\n",cb_tx[n][i]->C);
 					for (int r = 0; r < (cb_tx[n][i]->C); ++r)
@@ -428,10 +436,10 @@ void TaskScheduler_tx(void *arg)
 						int j = i * cbNum + r;
 						int jp = n * LayerNum * cbNum + i * cbNum + r;
 						if (r < cb_tx[n][i]->C - Lamda)
-							rm_outlen_tx[n][j] = CQI_mod[CQI_index[n * MaxBeam + i]] * (max_symbol_num / cb_tx[n][i]->C);
+							rm_outlen_tx[n][j] = CQI_mod[CQI_index[n * MAX_BEAM + i]] * (max_symbol_num / cb_tx[n][i]->C);
 						else
-							rm_outlen_tx[n][j] = CQI_mod[CQI_index[n * MaxBeam + i]] * ((max_symbol_num - 1) / cb_tx[n][i]->C + 1);
-						SymbolBitN[n][i] = CQI_mod[CQI_index[n * MaxBeam + i]];
+							rm_outlen_tx[n][j] = CQI_mod[CQI_index[n * MAX_BEAM + i]] * ((max_symbol_num - 1) / cb_tx[n][i]->C + 1);
+						SymbolBitN[n][i] = CQI_mod[CQI_index[n * MAX_BEAM + i]];
 						cr_symnum_tx[n][j] = rm_outlen_tx[n][j] / SymbolBitN[n][i];
 
 						crc_mod_args[jp].cbindex = r;
@@ -439,8 +447,8 @@ void TaskScheduler_tx(void *arg)
 						crc_mod_args[jp].tbp = data_bytes_tx[n][i];
 
 						crc_mod_args[jp].crc_p = crc_cb[n][j];
-						crc_mod_args[jp].crc_poly = crc_24B;
-						crc_mod_args[jp].crc_length = crc_length;
+						crc_mod_args[jp].crc_poly = CRC_24B;
+						crc_mod_args[jp].crc_length = CRC_LENGTH;
 						crc_mod_args[jp].cb = cr_data_bytes_tx[n][j];
 
 						crc_mod_args[jp].tcod = tcod[n][j];
@@ -463,15 +471,15 @@ void TaskScheduler_tx(void *arg)
 						s += cr_symnum_tx[n][j];
 
 						crc_mod_args[jp].ServiceEN = ServiceEN_tx;
-						crc_mod_args[jp].ServiceEN_index = n * taskNum_tx + 2;
+						crc_mod_args[jp].ServiceEN_index = n * TASK_NUM_TX + 2;
 
 						pool_add_task(crc_mod, (void *)&crc_mod_args[jp], 2);
 					}
 				}
-				ServiceEN_tx[n * taskNum_tx + 1] = 0; //关闭任务添加器(n,2)
+				ServiceEN_tx[n * TASK_NUM_TX + 1] = 0; //关闭任务添加器(n,2)
 			}
 			//  1.3  packing
-			if (ServiceEN_tx[n * taskNum_tx + 2] == cbtaskNum[n] && cbtaskNum[n] != 0)
+			if (ServiceEN_tx[n * TASK_NUM_TX + 2] == cbtaskNum[n] && cbtaskNum[n] != 0)
 			{ //任务添加器(n,3)打开
 				if (TIME_EN == 1)
 				{
@@ -494,15 +502,15 @@ void TaskScheduler_tx(void *arg)
 				m = 0;
 				k = 0;
 				int s = 0;
-				for (int ns = 0; ns < SymbolNum; ns++)
+				for (int ns = 0; ns < SYMBOL_NUM; ns++)
 				{
 					if ((ns != 3) && (ns != 10))
 					{
-						for (int nc = 0; nc < CarrierNum; nc++)
+						for (int nc = 0; nc < CARRIER_NUM; nc++)
 						{
 							for (int i = 0; i < LayerNum; i++)
 							{
-								m = ns * CarrierNum * LayerNum + nc * LayerNum + i;
+								m = ns * CARRIER_NUM * LayerNum + nc * LayerNum + i;
 								if (k < max_symbol_num)
 								{
 									x[p][m] = modsymb[n][i * max_symbol_num + k];
@@ -513,11 +521,11 @@ void TaskScheduler_tx(void *arg)
 					}
 					else
 					{
-						for (int nc = 0; nc < CarrierNum; nc++)
+						for (int nc = 0; nc < CARRIER_NUM; nc++)
 						{
 							for (int i = 0; i < LayerNum; i++)
 							{
-								m = ns * CarrierNum * LayerNum + nc * LayerNum + i;
+								m = ns * CARRIER_NUM * LayerNum + nc * LayerNum + i;
 								x[p][m] = PilotSymb[LayerNum - 1][s++];
 							}
 						}
@@ -541,42 +549,42 @@ void TaskScheduler_tx(void *arg)
 				float E = 0, Ep = 0, En = 0;
 				float Er[8];
 				bzero(Er, sizeof(float) * 8);
-				for (int ns = 0; ns < SymbolNum; ns++)
+				for (int ns = 0; ns < SYMBOL_NUM; ns++)
 				{
-					for (int nc = 0; nc < CarrierNum; nc++)
+					for (int nc = 0; nc < CARRIER_NUM; nc++)
 					{
 
 						for (int nl = 0; nl < LayerNum; nl++)
 						{
-							for (int nr = 0; nr < RxAntNum; nr++)
+							for (int nr = 0; nr < RX_ANT_NUM; nr++)
 							{
-								H_temp[nl * RxAntNum + nr] = H[t][CarrierNum * RxAntNum * LayerNum * ns + RxAntNum * LayerNum * nc + nl * RxAntNum + nr];
+								H_temp[nl * RX_ANT_NUM + nr] = H[t][CARRIER_NUM * RX_ANT_NUM * LayerNum * ns + RX_ANT_NUM * LayerNum * nc + nl * RX_ANT_NUM + nr];
 							}
 						}
 						for (int i = 0; i < LayerNum; i++)
 						{
-							x_temp[i] = x[p][CarrierNum * LayerNum * ns + LayerNum * nc + i];
+							x_temp[i] = x[p][CARRIER_NUM * LayerNum * ns + LayerNum * nc + i];
 						}
 						cblas_cgemm(Layout, transa, transb, _m, _n, _k, &alpha, H_temp, lda, x_temp, ldb, &beta, y_temp, ldc);
-						for (int i = 0; i < RxAntNum; i++)
+						for (int i = 0; i < RX_ANT_NUM; i++)
 						{
-							y[p][CarrierNum * RxAntNum * ns + RxAntNum * nc + i].real = y_temp[i].real + sigma * gwn[CarrierNum * RxAntNum * ns + RxAntNum * nc + i].real;
-							y[p][CarrierNum * RxAntNum * ns + RxAntNum * nc + i].imag = y_temp[i].imag + sigma * gwn[CarrierNum * RxAntNum * ns + RxAntNum * nc + i].imag;
-							//if(nc == 144) printf("\nRX %d symbol %d Carrier %d : y_temp = %f+%fi, y = %f+%fi, noise = %f+%fi\n",i,ns,nc, y_temp[i].real,y_temp[i].imag,y[p][CarrierNum * RxAntNum * ns + RxAntNum * nc + i].real,y[p][CarrierNum * RxAntNum * ns + RxAntNum * nc + i].imag,y[p][CarrierNum * RxAntNum * ns + RxAntNum * nc + i].real - y_temp[i].real,y[p][CarrierNum * RxAntNum * ns + RxAntNum * nc + i].imag - y_temp[i].imag);
-							E += y[p][CarrierNum * RxAntNum * ns + RxAntNum * nc + i].real * y[p][CarrierNum * RxAntNum * ns + RxAntNum * nc + i].real + y[p][CarrierNum * RxAntNum * ns + RxAntNum * nc + i].imag * y[p][CarrierNum * RxAntNum * ns + RxAntNum * nc + i].imag;
+							y[p][CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].real = y_temp[i].real + sigma * gwn[CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].real;
+							y[p][CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].imag = y_temp[i].imag + sigma * gwn[CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].imag;
+							//if(nc == 144) printf("\nRX %d symbol %d Carrier %d : y_temp = %f+%fi, y = %f+%fi, noise = %f+%fi\n",i,ns,nc, y_temp[i].real,y_temp[i].imag,y[p][CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].real,y[p][CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].imag,y[p][CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].real - y_temp[i].real,y[p][CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].imag - y_temp[i].imag);
+							E += y[p][CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].real * y[p][CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].real + y[p][CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].imag * y[p][CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].imag;
 							Ep += y_temp[i].real * y_temp[i].real + y_temp[i].imag * y_temp[i].imag;
 							Er[i] += y_temp[i].real * y_temp[i].real + y_temp[i].imag * y_temp[i].imag;
-							En += sigma * gwn[CarrierNum * RxAntNum * ns + RxAntNum * nc + i].real * sigma * gwn[CarrierNum * RxAntNum * ns + RxAntNum * nc + i].real + sigma * gwn[CarrierNum * RxAntNum * ns + RxAntNum * nc + i].imag * sigma * gwn[CarrierNum * RxAntNum * ns + RxAntNum * nc + i].imag;
+							En += sigma * gwn[CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].real * sigma * gwn[CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].real + sigma * gwn[CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].imag * sigma * gwn[CARRIER_NUM * RX_ANT_NUM * ns + RX_ANT_NUM * nc + i].imag;
 						}
 					}
 				}
-				E /= SymbolNum * CarrierNum;
-				Ep /= SymbolNum * CarrierNum;
-				En /= SymbolNum * CarrierNum;
+				E /= SYMBOL_NUM * CARRIER_NUM;
+				Ep /= SYMBOL_NUM * CARRIER_NUM;
+				En /= SYMBOL_NUM * CARRIER_NUM;
 				//printf("\nSNR = %f sigma = %f E = %f Ep = %f En = %f",SNR, sigma, E ,Ep ,En);
-				for (int i = 0; i < RxAntNum; i++)
+				for (int i = 0; i < RX_ANT_NUM; i++)
 				{
-					Er[i] /= SymbolNum * CarrierNum;
+					Er[i] /= SYMBOL_NUM * CARRIER_NUM;
 					//printf("%f ",Er[i]);
 				}
 				//printf("\n");
@@ -585,7 +593,7 @@ void TaskScheduler_tx(void *arg)
 				for (int i = 0; i < LayerNum; i++)
 				{
 					package_test[p].tbs[i] = data_len_tx[n][i];
-					package_test[p].CQI_index[i] = CQI_index[n * MaxBeam + i];
+					package_test[p].CQI_index[i] = CQI_index[n * MAX_BEAM + i];
 					package_test[p].SNR = SNR;
 					for (int j = 0; j < data_len_tx[n][i]; j++)
 					{
@@ -614,10 +622,10 @@ void TaskScheduler_tx(void *arg)
 					gettimeofday(&tx_begin, NULL); //--------------------tx
 				}
 
-				ServiceEN_tx[n * taskNum_tx + 2] = 0; //关闭任务添加器(n,3)
+				ServiceEN_tx[n * TASK_NUM_TX + 2] = 0; //关闭任务添加器(n,3)
 				cbtaskNum[n] = 0;
 				//printf("\nTX task 2");
-				ServiceEN_tx[n * taskNum_tx]++;
+				ServiceEN_tx[n * TASK_NUM_TX]++;
 				pthread_mutex_lock(&mutex_readyNum);
 				readyNum++;
 				pthread_mutex_unlock(&mutex_readyNum);
@@ -643,12 +651,12 @@ void TaskScheduler_rx(void *arg)
 	lapack_complex_float *package[paraNum_rx];
 	for (int i = 0; i < paraNum_rx; i++)
 	{
-		package[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MaxBeam * CarrierNum * SymbolNum);
+		package[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MAX_BEAM * CARRIER_NUM * SYMBOL_NUM);
 	}
-	srslte_cbsegm_t *cb_rx[paraNum_rx][MaxBeam];
+	srslte_cbsegm_t *cb_rx[paraNum_rx][MAX_BEAM];
 	for (int i = 0; i < paraNum_rx; i++)
 	{
-		for (int j = 0; j < MaxBeam; j++)
+		for (int j = 0; j < MAX_BEAM; j++)
 		{
 			cb_rx[i][j] = (srslte_cbsegm_t *)malloc(sizeof(srslte_cbsegm_t));
 		}
@@ -661,23 +669,23 @@ void TaskScheduler_rx(void *arg)
 	{
 		for (int j = 0; j < SBNum; j++)
 		{
-			CFR_SB[i][j] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum * MaxBeam * CarrierNum * SymbolNum / SBNum);
+			CFR_SB[i][j] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RX_ANT_NUM * MAX_BEAM * CARRIER_NUM * SYMBOL_NUM / SBNum);
 		}
 	}
 	int LayerNum = LAYER_NUM;
 	int inter_freq = LayerNum;
-	while (CarrierNum / SBNum % inter_freq != 0)
+	while (CARRIER_NUM / SBNum % inter_freq != 0)
 		inter_freq++;
 	struct chest_calsym_args_t *chest_calsym_args = (struct chest_calsym_args_t *)malloc(sizeof(struct chest_calsym_args_t) * SBNum * paraNum_rx);
 	lapack_complex_float *y[paraNum_rx][SBNum];
 	float *R_DCT[paraNum_rx][SBNum];
 	lapack_complex_float *H_est[paraNum_rx][SBNum];
 	lapack_complex_float *x_est[paraNum_rx][SBNum];
-	lapack_complex_float *PilotSymb[MaxBeam];
-	for (int i = 0; i < MaxBeam; i++)
+	lapack_complex_float *PilotSymb[MAX_BEAM];
+	for (int i = 0; i < MAX_BEAM; i++)
 	{
-		PilotSymb[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * (i + 1) * CarrierNum * PilotSymbNum);
-		CalPilotSymb(i + 1, CarrierNum, 2, 1, inter_freq, PilotSymb[i]);
+		PilotSymb[i] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * (i + 1) * CARRIER_NUM * PILOT_SYM_NUM);
+		CalPilotSymb(i + 1, CARRIER_NUM, 2, 1, inter_freq, PilotSymb[i]);
 	}
 	lapack_complex_float *PilotSymb_SB[paraNum_rx][SBNum];
 	float *SymbVar[paraNum_rx][SBNum];
@@ -686,8 +694,8 @@ void TaskScheduler_rx(void *arg)
 	int *SymbolBitN_L[paraNum_rx];
 	for (int i = 0; i < paraNum_rx; i++)
 	{
-		LLRD_Package[i] = (int16_t *)malloc(sizeof(int16_t) * MaxBeam * CarrierNum * SymbolNum * 6);
-		SymbolBitN_L[i] = (int *)malloc(sizeof(int) * MaxBeam);
+		LLRD_Package[i] = (int16_t *)malloc(sizeof(int16_t) * MAX_BEAM * CARRIER_NUM * SYMBOL_NUM * 6);
+		SymbolBitN_L[i] = (int *)malloc(sizeof(int) * MAX_BEAM);
 	}
 
 	struct chestLS_t *chestLS_p[paraNum_rx][SBNum];
@@ -698,22 +706,22 @@ void TaskScheduler_rx(void *arg)
 	{
 		for (int j = 0; j < SBNum; j++)
 		{
-			y[i][j] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum * CarrierNum * SymbolNum / SBNum);
-			R_DCT[i][j] = (float *)malloc(sizeof(float) * RxAntNum * LayerNum * CarrierNum * SymbolNum / SBNum);
-			H_est[i][j] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RxAntNum * MaxBeam * CarrierNum * SymbolNum / SBNum);
-			x_est[i][j] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MaxBeam * CarrierNum * SymbolNum / SBNum);
-			PilotSymb_SB[i][j] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MaxBeam * CarrierNum * PilotSymbNum / SBNum);
-			SymbVar[i][j] = (float *)malloc(sizeof(float) * MaxBeam * CarrierNum * SymbolNum / SBNum);
-			SINR_est[i][j] = (float *)malloc(sizeof(float) * MaxBeam * CarrierNum * SymbolNum / SBNum);
+			y[i][j] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RX_ANT_NUM * CARRIER_NUM * SYMBOL_NUM / SBNum);
+			R_DCT[i][j] = (float *)malloc(sizeof(float) * RX_ANT_NUM * LayerNum * CARRIER_NUM * SYMBOL_NUM / SBNum);
+			H_est[i][j] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RX_ANT_NUM * MAX_BEAM * CARRIER_NUM * SYMBOL_NUM / SBNum);
+			x_est[i][j] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MAX_BEAM * CARRIER_NUM * SYMBOL_NUM / SBNum);
+			PilotSymb_SB[i][j] = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * MAX_BEAM * CARRIER_NUM * PILOT_SYM_NUM / SBNum);
+			SymbVar[i][j] = (float *)malloc(sizeof(float) * MAX_BEAM * CARRIER_NUM * SYMBOL_NUM / SBNum);
+			SINR_est[i][j] = (float *)malloc(sizeof(float) * MAX_BEAM * CARRIER_NUM * SYMBOL_NUM / SBNum);
 
 			chestLS_p[i][j] = (struct chestLS_t *)malloc(sizeof(struct chestLS_t));
-			chestLS_init(chestLS_p[i][j], CarrierNum / SBNum, inter_freq, SymbolNum);
+			chestLS_init(chestLS_p[i][j], CARRIER_NUM / SBNum, inter_freq, SYMBOL_NUM);
 			chestDCT_p[i][j] = (struct chestDCT_t *)malloc(sizeof(struct chestDCT_t));
-			chestDCT_init(chestDCT_p[i][j], CarrierNum / SBNum, inter_freq, SymbolNum);
+			chestDCT_init(chestDCT_p[i][j], CARRIER_NUM / SBNum, inter_freq, SYMBOL_NUM);
 			CalSymb_p[i][j] = (struct CalSymb_t *)malloc(sizeof(struct CalSymb_t));
-			CalSymb_init(CalSymb_p[i][j], LayerNum, RxAntNum);
+			CalSymb_init(CalSymb_p[i][j], LayerNum, RX_ANT_NUM);
 			Rest_p[i][j] = (struct Rest_t *)malloc(sizeof(struct Rest_t));
-			REstimator_init(Rest_p[i][j], CarrierNum / SBNum, inter_freq, SymbolNum);
+			REstimator_init(Rest_p[i][j], CARRIER_NUM / SBNum, inter_freq, SYMBOL_NUM);
 		}
 	}
 	int PilotSymbIndex[2];
@@ -722,30 +730,30 @@ void TaskScheduler_rx(void *arg)
 
 	printf("RX task1 initialized \n");
 	//  1.3  descrambling - demodulation - rate matching - turbo decoding - crc check
-	int max_symbol_num = CarrierNum * DataSymNum;
-	int max_data_len_rx = CQI_cod[15] / 1024.0 * max_symbol_num * CQI_mod[15] - crc_length;
-	const int cbNum = (max_data_len_rx + crc_length) / 6144 + 1;
+	int max_symbol_num = CARRIER_NUM * DATA_SYM_NUM;
+	int max_data_len_rx = CQI_cod[15] / 1024.0 * max_symbol_num * CQI_mod[15] - CRC_LENGTH;
+	const int cbNum = (max_data_len_rx + CRC_LENGTH) / 6144 + 1;
 	uint32_t max_rm_data_len_rx = max_symbol_num * CQI_mod[15];
 	int max_modsymNum = max_symbol_num;
 	int cbtaskNum[paraNum_rx];
-	int *CQI_index = (int *)malloc(sizeof(int) * MaxBeam * packCache);
+	int *CQI_index = (int *)malloc(sizeof(int) * MAX_BEAM * packCache);
 
-	struct derm_crc_args_t *derm_crc_args = (struct derm_crc_args_t *)malloc(sizeof(struct derm_crc_args_t) * MaxBeam * cbNum * paraNum_rx);
-	int modsymNum[paraNum_rx][MaxBeam * cbNum];
-	int cr_symnum_rx[paraNum_rx][MaxBeam * cbNum];
-	int SymbolBitN[paraNum_rx][MaxBeam];
-	uint32_t rm_outlen_rx[paraNum_rx][MaxBeam];
-	uint32_t rm_data_len_rx[paraNum_rx][MaxBeam];
+	struct derm_crc_args_t *derm_crc_args = (struct derm_crc_args_t *)malloc(sizeof(struct derm_crc_args_t) * MAX_BEAM * cbNum * paraNum_rx);
+	int modsymNum[paraNum_rx][MAX_BEAM * cbNum];
+	int cr_symnum_rx[paraNum_rx][MAX_BEAM * cbNum];
+	int SymbolBitN[paraNum_rx][MAX_BEAM];
+	uint32_t rm_outlen_rx[paraNum_rx][MAX_BEAM];
+	uint32_t rm_data_len_rx[paraNum_rx][MAX_BEAM];
 	uint32_t Lamda;
 
 	genQAMtable();
 
 	int Kr = 0;
-	int16_t *cr_tdec_data_i_rx[paraNum_rx][MaxBeam * cbNum];
-	srslte_tdec_t *tdec[paraNum_rx][MaxBeam * cbNum];
+	int16_t *cr_tdec_data_i_rx[paraNum_rx][MAX_BEAM * cbNum];
+	srslte_tdec_t *tdec[paraNum_rx][MAX_BEAM * cbNum];
 	for (int i = 0; i < paraNum_rx; i++)
 	{
-		for (int j = 0; j < MaxBeam * cbNum; j++)
+		for (int j = 0; j < MAX_BEAM * cbNum; j++)
 		{
 			cr_tdec_data_i_rx[i][j] = (int16_t *)malloc(sizeof(int16_t) * 6176 * 3);
 			tdec[i][j] = (srslte_tdec_t *)malloc(sizeof(srslte_tdec_t));
@@ -762,26 +770,26 @@ void TaskScheduler_rx(void *arg)
 		detc_cb_sizes[srslte_cbsegm_cbsize(i)] = i;
 	}
 
-	uint8_t *cr_data_bytes_rx[paraNum_rx][MaxBeam * cbNum];
-	srslte_crc_t *crc_cb[paraNum_rx][MaxBeam * cbNum];
-	uint32_t *checksum_cb[paraNum_rx][MaxBeam];
-	uint8_t *data_rx[paraNum_rx][MaxBeam];
-	uint8_t *data_bytes_rx[paraNum_rx][MaxBeam];
+	uint8_t *cr_data_bytes_rx[paraNum_rx][MAX_BEAM * cbNum];
+	srslte_crc_t *crc_cb[paraNum_rx][MAX_BEAM * cbNum];
+	uint32_t *checksum_cb[paraNum_rx][MAX_BEAM];
+	uint8_t *data_rx[paraNum_rx][MAX_BEAM];
+	uint8_t *data_bytes_rx[paraNum_rx][MAX_BEAM];
 	for (int i = 0; i < paraNum_rx; i++)
 	{
-		for (int j = 0; j < MaxBeam * cbNum; j++)
+		for (int j = 0; j < MAX_BEAM * cbNum; j++)
 		{
 			crc_cb[i][j] = (srslte_crc_t *)malloc(sizeof(srslte_crc_t));
-			srslte_crc_init(crc_cb[i][j], crc_24B, crc_length);
+			srslte_crc_init(crc_cb[i][j], CRC_24B, CRC_LENGTH);
 			cr_data_bytes_rx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * SRSLTE_TCOD_MAX_LEN_CB / 8);
 		}
 	}
 	for (int i = 0; i < paraNum_rx; i++)
 	{
-		for (int j = 0; j < MaxBeam; j++)
+		for (int j = 0; j < MAX_BEAM; j++)
 		{
-			data_rx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * (max_data_len_rx + crc_length));
-			data_bytes_rx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * (max_data_len_rx + crc_length) / 8);
+			data_rx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * (max_data_len_rx + CRC_LENGTH));
+			data_bytes_rx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * (max_data_len_rx + CRC_LENGTH) / 8);
 			checksum_cb[i][j] = (uint32_t *)malloc(sizeof(uint32_t) * cbNum);
 			for (int k = 0; k < cbNum; k++)
 			{
@@ -791,28 +799,28 @@ void TaskScheduler_rx(void *arg)
 	}
 
 	//cbcon
-	int data_len_rx[paraNum_rx][MaxBeam];
+	int data_len_rx[paraNum_rx][MAX_BEAM];
 	printf("RX task2 initialized \n");
 	//  1.4  code block desegmentation - crc check
-	struct crc_check_args_t *crc_check_args = (struct crc_check_args_t *)malloc(sizeof(struct crc_check_args_t) * MaxBeam * paraNum_rx);
-	srslte_crc_t *crc_tb[paraNum_rx][MaxBeam];
+	struct crc_check_args_t *crc_check_args = (struct crc_check_args_t *)malloc(sizeof(struct crc_check_args_t) * MAX_BEAM * paraNum_rx);
+	srslte_crc_t *crc_tb[paraNum_rx][MAX_BEAM];
 	for (int i = 0; i < paraNum_rx; i++)
 	{
-		for (int j = 0; j < MaxBeam; j++)
+		for (int j = 0; j < MAX_BEAM; j++)
 		{
 			crc_tb[i][j] = (srslte_crc_t *)malloc(sizeof(srslte_crc_t));
-			srslte_crc_init(crc_tb[i][j], crc_24A, crc_length);
+			srslte_crc_init(crc_tb[i][j], CRC_24A, CRC_LENGTH);
 		}
 	}
 	uint32_t *checksum_tb[paraNum_rx];
 	for (int i = 0; i < paraNum_rx; i++)
 	{
-		checksum_tb[i] = (uint32_t *)malloc(sizeof(uint32_t) * MaxBeam);
+		checksum_tb[i] = (uint32_t *)malloc(sizeof(uint32_t) * MAX_BEAM);
 	}
 	printf("RX task3 initialized \n");
 	//-----Blocks error statistics-----
 	struct BER_t *BER = (struct BER_t *)malloc(sizeof(struct BER_t));
-	BER_init(BER, MaxBeam);
+	BER_init(BER, MAX_BEAM);
 	int *BERsignal = (int *)malloc(sizeof(int) * paraNum_rx);
 	for (int i = 0; i < paraNum_rx; i++)
 	{
@@ -829,16 +837,16 @@ void TaskScheduler_rx(void *arg)
 	runtime.rx = 0;
 	int bitsNum = 0;
 	//--------------------Data processing--------------------
-	ServiceEN_rx = (int *)malloc(sizeof(int) * paraNum_rx * taskNum_rx);
+	ServiceEN_rx = (int *)malloc(sizeof(int) * paraNum_rx * TASK_NUM_RX);
 	for (int i = 0; i < paraNum_rx; i++)
 	{
-		for (int j = 0; j < taskNum_rx; j++)
+		for (int j = 0; j < TASK_NUM_RX; j++)
 		{
-			ServiceEN_rx[i * taskNum_rx + j] = 0;
+			ServiceEN_rx[i * TASK_NUM_RX + j] = 0;
 		}
 	}
 	for (int i = 0; i < paraNum_rx; i++)
-		ServiceEN_rx[taskNum_rx * i] = LayerNum;
+		ServiceEN_rx[TASK_NUM_RX * i] = LayerNum;
 	sem_post(&rx_signal);
 	sem_wait(&tx_signal);
 	// omp_set_num_threads(1);
@@ -852,7 +860,7 @@ void TaskScheduler_rx(void *arg)
 		{
 
 			//  1.2  channel estimating - signal detecting
-			if (ServiceEN_rx[n * taskNum_rx] == LayerNum && readyNum != 0)
+			if (ServiceEN_rx[n * TASK_NUM_RX] == LayerNum && readyNum != 0)
 			{ //有数据需要处理，且任务添加器(n,1)打开
 				if (readyNum > 1)
 					pack = p;
@@ -861,9 +869,9 @@ void TaskScheduler_rx(void *arg)
 				for (int i = 0; i < LayerNum; ++i)
 				{
 					srslte_cbsegm(cb_rx[n][i], package_test[pack].tbs[i]);
-					CQI_index[n * MaxBeam + i] = package_test[pack].CQI_index[i];
+					CQI_index[n * MAX_BEAM + i] = package_test[pack].CQI_index[i];
 					test_rx[n].data[i] = package_test[pack].data[i];
-					SymbolBitN_L[n][i] = CQI_mod[CQI_index[n * MaxBeam + i]];
+					SymbolBitN_L[n][i] = CQI_mod[CQI_index[n * MAX_BEAM + i]];
 					test_rx[n].packIdx = pack;
 				}
 				test_rx[n].SNR = package_test[pack].SNR;
@@ -880,14 +888,14 @@ void TaskScheduler_rx(void *arg)
 
 					chest_calsym_args[j].R_DCT = R_DCT[n][j];
 					chest_calsym_args[j].PilotSymbIndex = PilotSymbIndex;
-					chest_calsym_args[j].TxAntNum = TxAntNum;
-					chest_calsym_args[j].RxAntNum = RxAntNum;
-					chest_calsym_args[j].CarrierNum_SB = CarrierNum / SBNum;
-					chest_calsym_args[j].CarrierNum = CarrierNum;
-					chest_calsym_args[j].UserNum = UserNum;
-					chest_calsym_args[j].MaxBeam = MaxBeam;
-					chest_calsym_args[j].PilotSymbNum = PilotSymbNum;
-					chest_calsym_args[j].SymbNum = SymbolNum;
+					chest_calsym_args[j].TxAntNum = TX_ANT_NUM;
+					chest_calsym_args[j].RxAntNum = RX_ANT_NUM;
+					chest_calsym_args[j].CarrierNum_SB = CARRIER_NUM / SBNum;
+					chest_calsym_args[j].CarrierNum = CARRIER_NUM;
+					chest_calsym_args[j].UserNum = USER_NUM;
+					chest_calsym_args[j].MaxBeam = MAX_BEAM;
+					chest_calsym_args[j].PilotSymbNum = PILOT_SYM_NUM;
+					chest_calsym_args[j].SymbNum = SYMBOL_NUM;
 					chest_calsym_args[j].inter_freq = inter_freq;
 					chest_calsym_args[j].LayerNum = LayerNum;
 					chest_calsym_args[j].Step = 1;
@@ -909,12 +917,12 @@ void TaskScheduler_rx(void *arg)
 					chest_calsym_args[j].LLRD_Package = LLRD_Package[n];
 					chest_calsym_args[j].SymbolBitN_L = SymbolBitN_L[n];
 
-					chest_calsym_args[j].ServiceEN_index = n * taskNum_rx + 1;
+					chest_calsym_args[j].ServiceEN_index = n * TASK_NUM_RX + 1;
 					chest_calsym_args[j].ServiceEN_rx = ServiceEN_rx;
 
 					pool_add_task(chest_calsym, (void *)&chest_calsym_args[j], 3);
 				}
-				ServiceEN_rx[n * taskNum_rx] = 0;
+				ServiceEN_rx[n * TASK_NUM_RX] = 0;
 				//printf("\nrx%d get package %d", n, p);
 				if (pack != 0)
 				{
@@ -928,7 +936,7 @@ void TaskScheduler_rx(void *arg)
 			}
 
 			//  1.3  descrambling - demodulation - rate matching - turbo decoding - crc check
-			if (ServiceEN_rx[n * taskNum_rx + 1] == SBNum)
+			if (ServiceEN_rx[n * TASK_NUM_RX + 1] == SBNum)
 			{
 
 				//printf("\nrx%d x_est : ",n);
@@ -939,7 +947,7 @@ void TaskScheduler_rx(void *arg)
 				for (int i = 0; i < LayerNum; i++)
 				{
 					int c = 0;
-					rm_data_len_rx[n][i] = max_symbol_num * CQI_mod[CQI_index[n * MaxBeam + i]];
+					rm_data_len_rx[n][i] = max_symbol_num * CQI_mod[CQI_index[n * MAX_BEAM + i]];
 					Lamda = max_symbol_num % cb_rx[n][i]->C;
 					cbtaskNum[n] += cb_rx[n][i]->C;
 					for (int r = 0; r < (cb_rx[n][i]->C); ++r)
@@ -947,11 +955,11 @@ void TaskScheduler_rx(void *arg)
 						int j = i * cbNum + r;
 						int jp = n * LayerNum * cbNum + i * cbNum + r;
 						if (r < cb_rx[n][i]->C - Lamda)
-							rm_outlen_rx[n][i] = CQI_mod[CQI_index[n * MaxBeam + i]] * (max_symbol_num / cb_rx[n][i]->C);
+							rm_outlen_rx[n][i] = CQI_mod[CQI_index[n * MAX_BEAM + i]] * (max_symbol_num / cb_rx[n][i]->C);
 						else
-							rm_outlen_rx[n][i] = CQI_mod[CQI_index[n * MaxBeam + i]] * ((max_symbol_num - 1) / cb_rx[n][i]->C + 1);
+							rm_outlen_rx[n][i] = CQI_mod[CQI_index[n * MAX_BEAM + i]] * ((max_symbol_num - 1) / cb_rx[n][i]->C + 1);
 						Kr = (r < cb_rx[n][i]->C2) ? cb_rx[n][i]->K2 : cb_rx[n][i]->K1;
-						SymbolBitN[n][i] = CQI_mod[CQI_index[n * MaxBeam + i]];
+						SymbolBitN[n][i] = CQI_mod[CQI_index[n * MAX_BEAM + i]];
 						cr_symnum_rx[n][j] = rm_outlen_rx[n][i] / SymbolBitN[n][i];
 
 						derm_crc_args[jp].LLRD_Package = LLRD_Package[n];
@@ -973,8 +981,8 @@ void TaskScheduler_rx(void *arg)
 						derm_crc_args[jp].cb_crc = cr_data_bytes_rx[n][j];
 
 						derm_crc_args[jp].crc_p = crc_cb[n][j];
-						derm_crc_args[jp].crc_poly = crc_24B;
-						derm_crc_args[jp].crc_length = crc_length;
+						derm_crc_args[jp].crc_poly = CRC_24B;
+						derm_crc_args[jp].crc_length = CRC_LENGTH;
 						derm_crc_args[jp].checksum = checksum_cb[n][i];
 						derm_crc_args[jp].r = r;
 						derm_crc_args[jp].cbnum = cb_rx[n][i]->C;
@@ -985,23 +993,23 @@ void TaskScheduler_rx(void *arg)
 						if ((cb_rx[n][i]->C) > 1)
 						{
 							if (r == 0)
-								c += Kr - cb_rx[n][i]->F - crc_length;
+								c += Kr - cb_rx[n][i]->F - CRC_LENGTH;
 							else
-								c += Kr - crc_length;
+								c += Kr - CRC_LENGTH;
 						}
 
-						derm_crc_args[jp].ServiceEN_index = n * taskNum_rx + 2;
+						derm_crc_args[jp].ServiceEN_index = n * TASK_NUM_RX + 2;
 						derm_crc_args[jp].ServiceEN_rx = ServiceEN_rx;
 
 						pool_add_task(derm_crc, (void *)&derm_crc_args[jp], 3);
 					}
 				}
-				ServiceEN_rx[n * taskNum_rx + 1] = 0;
+				ServiceEN_rx[n * TASK_NUM_RX + 1] = 0;
 			}
-			//printf("\n%d = %d?",ServiceEN_rx[n * taskNum_rx + 2],cbtaskNum[n]);
+			//printf("\n%d = %d?",ServiceEN_rx[n * TASK_NUM_RX + 2],cbtaskNum[n]);
 
 			//  1.4  code block desegmentation - crc check
-			if (ServiceEN_rx[n * taskNum_rx + 2] == cbtaskNum[n] && cbtaskNum[n] != 0)
+			if (ServiceEN_rx[n * TASK_NUM_RX + 2] == cbtaskNum[n] && cbtaskNum[n] != 0)
 			{
 
 				for (int i = 0; i < LayerNum; i++)
@@ -1012,8 +1020,8 @@ void TaskScheduler_rx(void *arg)
 					//printf("\nrx %d layer %d data : ", n, i);
 					//for(int k = 0; k < 10; k++) printf("%d", data_rx[n][i][k]);
 					crc_check_args[j].crc_p = crc_tb[n][i];
-					crc_check_args[j].crc_poly = crc_24A;
-					crc_check_args[j].crc_length = crc_length;
+					crc_check_args[j].crc_poly = CRC_24A;
+					crc_check_args[j].crc_length = CRC_LENGTH;
 					crc_check_args[j].tb = data_bytes_rx[n][i];
 					crc_check_args[j].checksum = checksum_tb[n];
 					crc_check_args[j].layer = i;
@@ -1024,7 +1032,7 @@ void TaskScheduler_rx(void *arg)
 
 					pool_add_task(crc_check, (void *)&crc_check_args[j], 3);
 				}
-				ServiceEN_rx[n * taskNum_rx + 2] = 0;
+				ServiceEN_rx[n * TASK_NUM_RX + 2] = 0;
 				cbtaskNum[n] = 0;
 				//printf("\nrx%d finish a package",n);
 			}
@@ -1139,7 +1147,7 @@ void TaskScheduler_rx(void *arg)
 					runIndex++;
 				}
 				BERsignal[n] = 0;
-				ServiceEN_rx[n * taskNum_rx] = LayerNum;
+				ServiceEN_rx[n * TASK_NUM_RX] = LayerNum;
 				pthread_mutex_lock(&mutex_packNum);
 				if (test_rx[n].packIdx != 0)
 					packNum--;

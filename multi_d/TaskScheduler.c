@@ -434,26 +434,25 @@ void TaskScheduler_tx(void *arg)
 					}
 				for (int i = 0; i < 6; i++)
 					printf("ServiceEN_tx[%d]=%d\n", i, ServiceEN_tx[i]);
-				exit(0);
 				printf("start tx task2\n");
 				int s = 0;
 				cbtaskNum[n] = 0;
 				for (int i = 0; i < LayerNum; i++)
 				{
-					cbtaskNum[n] += cb_tx[n][i]->C;
-					printf("437:%d,%d\n", cb_tx[n][i]->C, n);
+					int C_temp = cb_tx[n][i]->C;
+					// int C_temp = 14;
+					cbtaskNum[n] += C_temp;
+					printf("437:%d,%d\n", C_temp, n);
 					rm_data_len_tx[n][i] = MAX_SYMBOL_NUM * CQI_mod[CQI_index[n * MAX_BEAM + i]];
-					printf("439\n");
-					Lamda = MAX_SYMBOL_NUM % cb_tx[n][i]->C;
-					printf("441:%d\n", n);
-					for (int r = 0; r < (cb_tx[n][i]->C); ++r)
+					Lamda = MAX_SYMBOL_NUM % C_temp;
+					for (int r = 0; r < (C_temp); ++r)
 					{
 						int j = i * cbNum + r;
 						int jp = n * LayerNum * cbNum + i * cbNum + r;
-						if (r < cb_tx[n][i]->C - Lamda)
-							rm_outlen_tx[n][j] = CQI_mod[CQI_index[n * MAX_BEAM + i]] * (MAX_SYMBOL_NUM / cb_tx[n][i]->C);
+						if (r < C_temp - Lamda)
+							rm_outlen_tx[n][j] = CQI_mod[CQI_index[n * MAX_BEAM + i]] * (MAX_SYMBOL_NUM / C_temp);
 						else
-							rm_outlen_tx[n][j] = CQI_mod[CQI_index[n * MAX_BEAM + i]] * ((MAX_SYMBOL_NUM - 1) / cb_tx[n][i]->C + 1);
+							rm_outlen_tx[n][j] = CQI_mod[CQI_index[n * MAX_BEAM + i]] * ((MAX_SYMBOL_NUM - 1) / C_temp + 1);
 						SymbolBitN[n][i] = CQI_mod[CQI_index[n * MAX_BEAM + i]];
 						cr_symnum_tx[n][j] = rm_outlen_tx[n][j] / SymbolBitN[n][i];
 

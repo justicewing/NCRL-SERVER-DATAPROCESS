@@ -12,7 +12,7 @@
 #define CRC_24B 0x1800063
 
 #define TOTALTAIL 12
-#define BUFFSZ 6176 * 3
+#define BUFFSZ (6176 * 3)
 
 #define CARRIER_NUM 1200
 #define TX_ANT_NUM 128
