@@ -9,7 +9,6 @@ unsigned char mbuf[MAX_MBUFF];
 int index_read_tx;
 extern int readyNum_tx;
 extern int startNum_tx;
-extern const int CacheNum_tx;
 extern struct package_t *package_tx;
 extern pthread_mutex_t mutex_readyNum_tx;
 extern pthread_mutex_t mutex_startNum_tx;
@@ -17,7 +16,7 @@ extern sem_t tx_can_be_destroyed;
 extern sem_t tx_is_ready;
 extern sem_t tx_buff_is_ready;
 
-int buffisEmpty = 1;
+int buffisEmpty;
 pthread_mutex_t mutex_buffisEmpty;
 
 int package_to_buff(struct package_t *package, unsigned char *buff_p);
@@ -26,6 +25,7 @@ void Tx_buff(void *arg)
 {
     // printf("tx buff start\n");
     index_read_tx = 0;
+    buffisEmpty = 1;
     pthread_mutex_init(&mutex_buffisEmpty, NULL);
     printf("tx buff is ready...\n");
     sem_post(&tx_buff_is_ready);
@@ -35,6 +35,7 @@ void Tx_buff(void *arg)
     {
         if (readyNum_tx > 0 && buffisEmpty)
         {
+            printf("tx buff circle start\n");
             package_to_buff(&package_tx[index_read_tx], mbuf);
             index_read_tx++;
             if (index_read_tx == CacheNum_tx)
@@ -56,6 +57,7 @@ void Tx_buff(void *arg)
 
 int package_to_buff(struct package_t *package, unsigned char *buff)
 {
+    printf("package to buff start\n");
     unsigned char *buff_p = buff;
     int buff_length = 0;
 

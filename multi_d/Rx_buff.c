@@ -7,8 +7,7 @@
 extern unsigned char *mbuf;
 int index_write_rx;
 extern int readyNum_rx;
-extern int CacheNum_rx;
-struct package_t package_rx[20];
+struct package_t package_rx[CacheNum_rx];
 extern pthread_mutex_t mutex_readyNum_rx;
 extern sem_t rx_can_be_destroyed;
 extern sem_t rx_is_ready;
@@ -38,8 +37,9 @@ void Rx_buff(void *arg)
     printf("rx buff start\n");
     while (1)
     {
-        if (readyNum_rx <= CacheNum_rx && !buffisEmpty)
+        if (readyNum_rx <= CacheNum_rx && (!buffisEmpty))
         {
+            printf("rx buff circle start\n");
             buff_to_package(&package_rx[index_write_rx], mbuf);
             index_write_rx++;
             if (index_write_rx >= CacheNum_rx)

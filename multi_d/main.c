@@ -67,13 +67,13 @@ int main()
 	printf("creat pool 0...\n");
 	pool_init(1, 1, 1);
 	printf("creat pool 1...\n");
-	pool_init(2, 1, 2);
+	pool_init(2, threadNum_tx, 2);
 	printf("creat pool 2...\n");
-	pool_init(3, 1, 3);
+	pool_init(2 + threadNum_tx, threadNum_rx, 3);
 	printf("creat pool 3...\n");
-	pool_init(4, threadNum_tx, 4);
+	pool_init(4, 1, 4);
 	printf("creat pool 4...\n");
-	pool_init(4 + threadNum_tx, threadNum_rx, 5);
+	pool_init(5, 1, 5);
 	printf("creat pool 5...\n");
 
 	// force_quit = false;
@@ -86,10 +86,10 @@ int main()
 	/* 添加接收端主任务 */
 	pool_add_task(TaskScheduler_rx, NULL, 1);
 	printf("add rx taskScheduler to pool 1...\n");
-	pool_add_task(Tx_buff, NULL, 2);
-	printf("add rx taskScheduler to pool 2...\n");
-	pool_add_task(Rx_buff, NULL, 3);
-	printf("add rx taskScheduler to pool 3...\n");
+	pool_add_task(Tx_buff, NULL, 4);
+	printf("add rx taskScheduler to pool 4...\n");
+	pool_add_task(Rx_buff, NULL, 5);
+	printf("add rx taskScheduler to pool 5...\n");
 
 	/* 等待信号销毁线程 */
 	sem_wait(&tx_can_be_destroyed);

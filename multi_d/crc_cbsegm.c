@@ -19,7 +19,7 @@ void crc_cbsegm(void *arg){
 
 	srslte_crc_attach_byte(crc_cbsegm_args.crc_p, crc_cbsegm_args.tb, crc_cbsegm_args.tbs);
 	srslte_cbsegm(crc_cbsegm_args.cb_tx,crc_cbsegm_args.tbs);
-	
+	printf("C=%d,addr:%d\n",crc_cbsegm_args.cb_tx->C,crc_cbsegm_args.cb_tx);
 	pthread_mutex_lock(&mutex1_tx);
 	crc_cbsegm_args.ServiceEN[crc_cbsegm_args.ServiceEN_index]++;
 	pthread_mutex_unlock(&mutex1_tx);

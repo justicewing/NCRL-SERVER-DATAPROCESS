@@ -4,6 +4,9 @@
 #include <mkl.h>
 #include <stdint.h>
 
+#define CacheNum_tx 10 // 缓存
+#define CacheNum_rx 10
+
 #define CRC_LENGTH 24
 #define CRC_24A 0x1864CFB
 #define CRC_24B 0x1800063
@@ -21,6 +24,8 @@
 #define PILOT_SYM_NUM 2
 #define SYMBOL_NUM (DATA_SYM_NUM + PILOT_SYM_NUM)
 #define MAX_MOD 6
+#define MAX_COD 948
+#define MAX_SYMBOL_NUM (CARRIER_NUM * DATA_SYM_NUM)
 
 #define TASK_NUM_TX 3
 #define TASK_NUM_RX 3
@@ -36,11 +41,10 @@
 //  8 : D  13200 = 1200 * 11
 //  9 : D  13200 = 1200 * 11
 
-#define MAX_SYMBOL_NUM (CARRIER_NUM *DATA_SYM_NUM)
-#define MAX_DATA_SIZE_TX (MAX_MOD / 1024.0 * MAX_SYMBOL_NUM *MAX_MOD - CRC_LENGTH)
-#define SIZE_Y (MAX_BEAM *CARRIER_NUM *SYMBOL_NUM * sizeof(lapack_complex_float))
+#define MAX_DATA_SIZE_TX (MAX_COD * MAX_SYMBOL_NUM / 1024.0 - CRC_LENGTH)
+#define SIZE_Y (MAX_BEAM * CARRIER_NUM * SYMBOL_NUM * sizeof(lapack_complex_float))
 #define MAX_MBUFF (2 * MAX_BEAM * sizeof(int) + sizeof(float) + \
-					  MAX_BEAM *CARRIER_NUM *SYMBOL_NUM * sizeof(lapack_complex_float))
+				   MAX_BEAM * CARRIER_NUM * SYMBOL_NUM * sizeof(lapack_complex_float))
 
 struct package_t
 {

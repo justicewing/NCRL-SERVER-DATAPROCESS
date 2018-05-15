@@ -24,8 +24,8 @@
 
 #define LAYER_NUM 8
 #define CQI_INDEX 15
-#define TX_POOL_ID 4
-#define RX_POOL_ID 5 
+#define TX_POOL_ID 2
+#define RX_POOL_ID 3
 
 /* 来自config.h的难民数组 */
 const int CQI_mod[16] = {0, 2, 2, 2, 2, 2, 2, 4, 4, 4, 6, 6, 6, 6, 6, 6};
@@ -43,10 +43,8 @@ extern sem_t tx_buff_is_ready;
 extern sem_t rx_is_ready;
 extern sem_t rx_buff_is_ready;
 
-const int paraNum_tx = 2;   // 发送端同时处理子帧上限
-const int paraNum_rx = 5;   // 接收端同时处理子帧上限
-const int CacheNum_tx = 20; // 缓存
-const int CacheNum_rx = 20;
+#define paraNum_tx 2 // 发送端同时处理子帧上限
+#define paraNum_rx 5 // 接收端同时处理子帧上限
 int index_write_tx;
 int index_read_rx;
 int readyNum_tx;
@@ -55,7 +53,7 @@ int startNum_tx;
 pthread_mutex_t mutex_startNum_tx;
 pthread_mutex_t mutex_readyNum_tx;
 pthread_mutex_t mutex_readyNum_rx;
-struct package_t package_tx[20];
+struct package_t package_tx[CacheNum_tx];
 extern struct package_t *package_rx;
 
 const int SBNum = 50; // 信道估计相关
@@ -73,7 +71,7 @@ void TaskScheduler_tx(void *arg)
 
 	//--------------------Set the initial parameters--------------------
 	readyNum_tx = 0, startNum_tx = 0;
-	index_write_tx = 0, index_read_rx = 0;
+	index_write_tx = 0;
 	pthread_mutex_init(&mutex_startNum_tx, NULL);
 	pthread_mutex_init(&mutex_readyNum_tx, NULL);
 	for (int p = 0; p < CacheNum_tx; p++)
@@ -124,11 +122,12 @@ void TaskScheduler_tx(void *arg)
 			data_bytes_tx[i][j] = (uint8_t *)malloc(sizeof(uint8_t) * (MAX_DATA_SIZE_TX + CRC_LENGTH) / 8);
 		}
 	}
+	// printf("sizeof(uint8_t) * (MAX_DATA_SIZE_TX + CRC_LENGTH) / 8:%d\n", sizeof(uint8_t) * (MAX_DATA_SIZE_TX + CRC_LENGTH) / 8);
 
 	//--------------------The preparation of the TX--------------------
 
 	//  1.1  crc attach - code block segmentation
-	struct crc_cbsegm_args_t *crc_cbsegm_args = (struct crc_cbsegm_args_t *)malloc(sizeof(struct crc_cbsegm_args_t) * paraNum_tx * MAX_BEAM);
+	struct crc_cbsegm_args_t crc_cbsegm_args[paraNum_tx * MAX_BEAM];
 	srslte_crc_t *crc_tb[paraNum_tx][MAX_BEAM];
 	srslte_cbsegm_t *cb_tx[paraNum_tx][MAX_BEAM];
 	for (int i = 0; i < paraNum_tx; i++)
@@ -380,13 +379,14 @@ void TaskScheduler_tx(void *arg)
 		//if(runIndex >= 3000) break;
 		for (int n = 0; n < paraNum_tx; n++)
 		{
-
 			//  1.1  crc attach - code block segmentation
 			if (startNum_tx < CacheNum_tx && ServiceEN_tx[n * TASK_NUM_TX] == 1)
 			{ //有数据需要发送，且任务添加器(n,1)打开
+				printf("start tx task1\n");
 				pthread_mutex_lock(&mutex_startNum_tx);
 				startNum_tx++;
 				pthread_mutex_unlock(&mutex_startNum_tx);
+				// printf("startNum:%d\n", startNum_tx);
 				if (TIME_EN == 0)
 				{
 					// get new original data
@@ -414,6 +414,7 @@ void TaskScheduler_tx(void *arg)
 					crc_cbsegm_args[j].tbs = data_len_tx[n][i];
 					crc_cbsegm_args[j].tb = data_bytes_tx[n][i];
 					crc_cbsegm_args[j].cb_tx = cb_tx[n][i];
+					printf("j=%d,->C=%d\n", j, crc_cbsegm_args[j].cb_tx);
 
 					crc_cbsegm_args[j].ServiceEN = ServiceEN_tx;
 					crc_cbsegm_args[j].ServiceEN_index = n * TASK_NUM_TX + 1;
@@ -422,17 +423,29 @@ void TaskScheduler_tx(void *arg)
 				}
 				ServiceEN_tx[n * TASK_NUM_TX] = 0; //关闭任务添加器(n,1)
 			}
-
 			//  1.2  crc attach - turbo coding - rate matching - code block concatenation
 			if (ServiceEN_tx[n * TASK_NUM_TX + 1] == LayerNum)
 			{ //任务添加器(n,2)打开
+				for (int i = 0; i < 2; i++)
+					for (int j = 0; j < 8; j++)
+					{
+						printf("C[%d][%d]=%d\n", i, j, cb_tx[i][j]->C);
+						printf("arg->C[%d][%d]=%d\n", i, j, crc_cbsegm_args[n * 8 + j].cb_tx->C);
+					}
+				for (int i = 0; i < 6; i++)
+					printf("ServiceEN_tx[%d]=%d\n", i, ServiceEN_tx[i]);
+				exit(0);
+				printf("start tx task2\n");
 				int s = 0;
 				cbtaskNum[n] = 0;
 				for (int i = 0; i < LayerNum; i++)
 				{
 					cbtaskNum[n] += cb_tx[n][i]->C;
+					printf("437:%d,%d\n", cb_tx[n][i]->C, n);
 					rm_data_len_tx[n][i] = MAX_SYMBOL_NUM * CQI_mod[CQI_index[n * MAX_BEAM + i]];
+					printf("439\n");
 					Lamda = MAX_SYMBOL_NUM % cb_tx[n][i]->C;
+					printf("441:%d\n", n);
 					for (int r = 0; r < (cb_tx[n][i]->C); ++r)
 					{
 						int j = i * cbNum + r;
@@ -484,6 +497,7 @@ void TaskScheduler_tx(void *arg)
 			//  1.3  packing
 			if (ServiceEN_tx[n * TASK_NUM_TX + 2] == cbtaskNum[n] && cbtaskNum[n] != 0)
 			{ //任务添加器(n,3)打开
+				printf("start tx task3\n");
 				if (TIME_EN == 1)
 				{
 					TIME++;
@@ -592,7 +606,7 @@ void TaskScheduler_tx(void *arg)
 				}
 				//printf("\n");
 				//printf("Through the channel...\n");
-				package_tx[index_write_tx].y = y[index_write_tx];
+				//package_tx[index_write_tx].y = y[index_write_tx];
 				for (int i = 0; i < LayerNum; i++)
 				{
 					package_tx[index_write_tx].tbs[i] = data_len_tx[n][i];
@@ -649,7 +663,9 @@ void TaskScheduler_rx(void *arg)
 
 	//--------------------Initialize parameters--------------------
 	//-----simulation-----
+	index_read_rx = 0;
 	struct test_rx_t *test_rx = (struct test_rx_t *)malloc(sizeof(struct test_rx_t) * paraNum_rx);
+	pthread_mutex_init(&mutex_readyNum_rx, NULL);
 	//  1.1  Unpacking
 	lapack_complex_float *package[paraNum_rx];
 	for (int i = 0; i < paraNum_rx; i++)
@@ -832,11 +848,6 @@ void TaskScheduler_rx(void *arg)
 	int BLER_EN = 1, BER_EN = 1;
 	int TIME_EN = 1;
 
-	printf("TaskScheduler rx prepared...\n");
-	sem_post(&rx_is_ready);
-	sem_wait(&rx_buff_is_ready);	
-	printf("rx start\n");
-
 	int count_ms = 0, count_s = 0, TIME = 0;
 	//-----time test-----
 	struct timeval rx_begin, rx_end;
@@ -855,6 +866,12 @@ void TaskScheduler_rx(void *arg)
 	for (int i = 0; i < paraNum_rx; i++)
 		ServiceEN_rx[TASK_NUM_RX * i] = LayerNum;
 	// omp_set_num_threads(1);		//?
+
+	printf("TaskScheduler rx prepared...\n");
+	sem_post(&rx_is_ready);
+	sem_wait(&rx_buff_is_ready);
+	printf("rx start\n");
+
 	if (TIME_EN == 1)
 		gettimeofday(&rx_begin, NULL); //--------------------rx
 	while (1)
@@ -863,10 +880,10 @@ void TaskScheduler_rx(void *arg)
 		//if(runIndex == 3000) break;
 		for (int n = 0; n < paraNum_rx; n++)
 		{
-
 			//  1.2  channel estimating - signal detecting
 			if (ServiceEN_rx[n * TASK_NUM_RX] == LayerNum && readyNum_rx > 0)
 			{ //有数据需要处理，且任务添加器(n,1)打开
+				printf("start rx task1\n");
 				// if (readyNum_tx > 1)
 				// 	index_read_rx = index_write_tx;
 				// else
@@ -940,6 +957,7 @@ void TaskScheduler_rx(void *arg)
 			//  1.3  descrambling - demodulation - rate matching - turbo decoding - crc check
 			if (ServiceEN_rx[n * TASK_NUM_RX + 1] == SBNum)
 			{
+				printf("start rx task2\n");
 
 				//printf("\nrx%d x_est : ",n);
 				//for(int i = 0; i < 8; i++) printf("%f+%fi ",x_est[n][0][i]);
@@ -1013,6 +1031,7 @@ void TaskScheduler_rx(void *arg)
 			//  1.4  code block desegmentation - crc check
 			if (ServiceEN_rx[n * TASK_NUM_RX + 2] == cbtaskNum[n] && cbtaskNum[n] != 0)
 			{
+				printf("start rx task3\n");
 
 				for (int i = 0; i < LayerNum; i++)
 				{
@@ -1042,6 +1061,7 @@ void TaskScheduler_rx(void *arg)
 			//  1.5  BER statistics
 			if (BERsignal[n] == LayerNum)
 			{
+				printf("start rx part4\n");
 				if (statistics == 1)
 				{ //----------------------Statistics information
 					if (TIME_EN == 1)
