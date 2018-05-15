@@ -26,7 +26,8 @@ pthread_mutex_t mutex2_rx;
 pthread_mutex_t mutex3_rx;
 
 /* 声明信号量 */
-sem_t exit_signal;
+sem_t tx_can_be_destroyed;
+sem_t rx_can_be_destroyed;
 //test
 sem_t tx_signal;
 sem_t rx_signal;
@@ -41,7 +42,8 @@ int main(){
 	pthread_mutex_init(&mutex3_rx,NULL);
 	
 	/* 初始化信号量 */
-	sem_init(&exit_signal,0,0);
+	sem_init(&tx_can_be_destroyed, 0, 0);
+	sem_init(&rx_can_be_destroyed, 0, 0);
 	sem_init(&tx_signal,0,0);
 	sem_init(&rx_signal,0,0);
 	
@@ -60,15 +62,15 @@ int main(){
 	pool_add_task(TaskScheduler_rx, NULL, 1);
 	printf("add rx taskScheduler to pool 1...\n");
 
-	/* 等待收发机主任务完成 */
-	for(int i = 0; i < 2; i++) sem_wait(&exit_signal);
-
-	/* 销毁线程池 */
+	/* 等待信号销毁线程 */
+	sem_wait(&tx_can_be_destroyed);
 	pool_destroy(0);
+	sem_wait(&rx_can_be_destroyed);
 	pool_destroy(1);
 
 	/* 销毁信号量*/
-	sem_destroy(&exit_signal);
+	sem_destroy(&tx_can_be_destroyed);
+	sem_destroy(&rx_can_be_destroyed);
 
 	return 0;
 }
