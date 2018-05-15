@@ -35,7 +35,10 @@
 #define MAX_MOD_DATA_LEN_TX (MAX_RM_DATA_LEN_TX / MIN_CQI_MOD)
 #define MAX_DATA_LEN_RX (MAX_CQI_COD / 1024.0 * MAX_SYMBOL_NUM * MAX_CQI_MOD - CRC_LENGTH)
 
+#define MAX_MBUFF (2 * MAX_BEAM * sizeof(int) + sizeof(float) + \
+				   MAX_BEAM * CARRIER_NUM * SYMBOL_NUM * sizeof(lapack_complex_float))
 
+#define PACK_CACHE 20 // 缓存
 //  0 : D  12408 = 1128 * 11
 //  1 : S  10728 = 1200 * 8 + 1128 * 1
 //  2 : U  12540 = 1140 * 11
@@ -60,7 +63,7 @@ struct test_rx_t
 {
 	uint8_t *data[8];
 	float SNR;
-	int packIdx;
+	//int packIdx;
 };
 
 struct RunTime

@@ -31,7 +31,6 @@ extern sem_t tx_can_be_destroyed;
 extern sem_t rx_can_be_destroyed;
 #define PARA_NUM_TX 2 // 发送端同时处理子帧上限
 #define PARA_NUM_RX 5 // 接收端同时处理子帧上限
-#define PACK_CACHE 20 // 缓存
 const int SBNum = 50; // 信道估计相关
 //test
 struct package_t package_tx[PACK_CACHE];
@@ -41,10 +40,10 @@ lapack_complex_float *H[1];
 const int testError = 100;
 const int testTime = 100;
 struct RunTime runtime;
-int readyNum;
-int startNum;
-pthread_mutex_t mutex_startNum;
-pthread_mutex_t mutex_readyNum;
+int readyNum_tx;
+int startNum_tx;
+pthread_mutex_t mutex_startNum_tx;
+pthread_mutex_t mutex_readyNum_tx;
 int runIndex = 0;
 
 const int CQI_mod[16] = {0, 2, 2, 2, 2, 2, 2, 4, 4, 4, 6, 6, 6, 6, 6, 6};
@@ -57,9 +56,9 @@ void TaskScheduler_tx(void *arg)
 {
 
 	//--------------------Set the initial parameters--------------------
-	readyNum = 0, startNum = 0;
-	pthread_mutex_init(&mutex_startNum, NULL);
-	pthread_mutex_init(&mutex_readyNum, NULL);
+	readyNum_tx = 0, startNum_tx = 0;
+	pthread_mutex_init(&mutex_startNum_tx, NULL);
+	pthread_mutex_init(&mutex_readyNum_tx, NULL);
 	for (int index_tx_write = 0; index_tx_write < PACK_CACHE; index_tx_write++)
 	{
 		package_tx[index_tx_write].tbs = (int *)malloc(sizeof(int) * MAX_BEAM);
@@ -365,11 +364,11 @@ void TaskScheduler_tx(void *arg)
 		for (int n = 0; n < PARA_NUM_TX; n++)
 		{
 			//  1.1  crc attach - code block segmentation
-			if (startNum < PACK_CACHE && ServiceEN_tx[n * TASK_NUM_TX] == 1)
+			if (startNum_tx < PACK_CACHE && ServiceEN_tx[n * TASK_NUM_TX] == 1)
 			{ //有数据需要发送，且任务添加器(n,1)打开
-				pthread_mutex_lock(&mutex_startNum);
-				startNum++;
-				pthread_mutex_unlock(&mutex_startNum);
+				pthread_mutex_lock(&mutex_startNum_tx);
+				startNum_tx++;
+				pthread_mutex_unlock(&mutex_startNum_tx);
 				if (TIME_EN == 0)
 				{
 					// get new original data
@@ -624,9 +623,9 @@ void TaskScheduler_tx(void *arg)
 				cbtaskNum[n] = 0;
 				//printf("\nTX task 2");
 				ServiceEN_tx[n * TASK_NUM_TX]++;
-				pthread_mutex_lock(&mutex_readyNum);
-				readyNum++;
-				pthread_mutex_unlock(&mutex_readyNum);
+				pthread_mutex_lock(&mutex_readyNum_tx);
+				readyNum_tx++;
+				pthread_mutex_unlock(&mutex_readyNum_tx);
 				index_tx_write++;
 				if (index_tx_write >= PACK_CACHE)
 					index_tx_write = 0;
@@ -857,9 +856,9 @@ void TaskScheduler_rx(void *arg)
 		{
 
 			//  1.2  channel estimating - signal detecting
-			if (ServiceEN_rx[n * TASK_NUM_RX] == LayerNum && readyNum > 0)
+			if (ServiceEN_rx[n * TASK_NUM_RX] == LayerNum && readyNum_tx > 0)
 			{ //有数据需要处理，且任务添加器(n,1)打开
-				// if (readyNum > 1)
+				// if (readyNum_tx > 1)
 				// 	index_rx_read = index_tx_write;
 				// else
 				// 	index_rx_read = 0;
@@ -923,9 +922,9 @@ void TaskScheduler_rx(void *arg)
 				//printf("\nrx%d get package %d", n, index_tx_write);
 				//if (index_rx_read != 0)
 				//{
-				pthread_mutex_lock(&mutex_readyNum);
-				readyNum--;
-				pthread_mutex_unlock(&mutex_readyNum);
+				pthread_mutex_lock(&mutex_readyNum_tx);
+				readyNum_tx--;
+				pthread_mutex_unlock(&mutex_readyNum_tx);
 				index_rx_read++;
 				//}
 				if (index_rx_read == PACK_CACHE)
@@ -1136,8 +1135,8 @@ void TaskScheduler_rx(void *arg)
 							//gettimeofday(&rx_begin, NULL);//--------------------rx
 							bitsNum = 0;
 							TIME = 0;
-							//printf("startNum %d\n",startNum);
-							//printf("readyNum %d\n",readyNum);
+							//printf("startNum_tx %d\n",startNum_tx);
+							//printf("readyNum_tx %d\n",readyNum_tx);
 						}
 						gettimeofday(&rx_begin, NULL); //--------------------rx
 					}
@@ -1145,9 +1144,9 @@ void TaskScheduler_rx(void *arg)
 				}
 				BERsignal[n] = 0;
 				ServiceEN_rx[n * TASK_NUM_RX] = LayerNum;
-				pthread_mutex_lock(&mutex_startNum);
-				startNum--;
-				pthread_mutex_unlock(&mutex_startNum);
+				pthread_mutex_lock(&mutex_startNum_tx);
+				startNum_tx--;
+				pthread_mutex_unlock(&mutex_startNum_tx);
 			}
 		}
 	}
