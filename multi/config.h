@@ -38,7 +38,7 @@
 #define MAX_MBUFF (2 * MAX_BEAM * sizeof(int) + sizeof(float) + \
 				   MAX_BEAM * CARRIER_NUM * SYMBOL_NUM * sizeof(lapack_complex_float) + MAX_BEAM * (MAX_DATA_LEN_TX + CRC_LENGTH))
 
-#define PACK_CACHE 20 // 缓存
+#define PACK_CACHE 10 // 缓存
 #define SIZE_Y (MAX_BEAM * CARRIER_NUM * SYMBOL_NUM * sizeof(lapack_complex_float))
 //  0 : D  12408 = 1128 * 11
 //  1 : S  10728 = 1200 * 8 + 1128 * 1

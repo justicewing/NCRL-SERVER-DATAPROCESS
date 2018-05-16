@@ -1197,12 +1197,13 @@ void Tx_buff(void *arg)
 	while (1)
 	{
 		// printf("aaaaaa……\n");
-		if (readyNum_tx == 0)
-			sem_wait(&cache_tx);
+		// if (readyNum_tx == 0)
+		sem_wait(&cache_tx);
 		if (readyNum_tx > 0 && buffisEmpty)
 		{
-			printf("\n\n\ntx buff circle start\n\n\n\n");
+			printf("\ntx buff circle start:%d\n", index_read_tx);
 			package_to_buff(&package_tx[index_read_tx], mbuf);
+			printf("\ntx buff down:%d\n", index_read_tx);
 			index_read_tx++;
 			if (index_read_tx >= PACK_CACHE)
 				index_read_tx = 0;
@@ -1214,10 +1215,10 @@ void Tx_buff(void *arg)
 			// pthread_mutex_unlock(&mutex_startNum_tx);
 			pthread_mutex_lock(&mutex_buffisEmpty);
 			buffisEmpty = 0;
-			pthread_mutex_lock(&mutex_buffisEmpty);
+			pthread_mutex_unlock(&mutex_buffisEmpty);
 			sem_post(&buffisnotEmpty);
-			printf("buffisEmpty:%d\n", buffisEmpty);
-			printf("tx buff circle end\n");
+			// printf("buffisEmpty:%d\n", buffisEmpty);
+			// printf("tx buff circle end\n");
 		}
 	}
 	pthread_mutex_destroy(&mutex_buffisEmpty);
@@ -1307,10 +1308,11 @@ int index_write_rx;
 int readyNum_rx;
 struct package_t package_rx[PACK_CACHE];
 int buff_to_package(struct package_t *package, unsigned char *buff_p);
+// FILE *rx_buff_file;
 
 void Rx_buff(void *arg)
 {
-	FILE *rx_buff_file = fopen("Rx_buff_log.txt", "w");
+	// rx_buff_file = fopen("Rx_buff_log.txt", "w");
 	readyNum_rx = 0;
 	index_write_rx = 0;
 	// printf("rx buff start\n");
@@ -1334,8 +1336,9 @@ void Rx_buff(void *arg)
 			sem_wait(&buffisnotEmpty);
 		if (readyNum_rx < PACK_CACHE && (!buffisEmpty))
 		{
-			fprintf(rx_buff_file,"\n\n\nrx buff circle start\n\n\n\n");
+			printf("\nrx buff circle start:%d\n", index_write_rx);
 			buff_to_package(&package_rx[index_write_rx], mbuf);
+			printf("\nrx buff down:%d", index_write_rx);
 			index_write_rx++;
 			if (index_write_rx >= PACK_CACHE)
 				index_write_rx = 0;
@@ -1344,7 +1347,7 @@ void Rx_buff(void *arg)
 			pthread_mutex_unlock(&mutex_readyNum_rx);
 			pthread_mutex_lock(&mutex_buffisEmpty);
 			buffisEmpty = 1;
-			pthread_mutex_lock(&mutex_buffisEmpty);
+			pthread_mutex_unlock(&mutex_buffisEmpty);
 		}
 	}
 	sem_post(&rx_can_be_destroyed);
@@ -1383,7 +1386,7 @@ int buff_to_package(struct package_t *package, unsigned char *buff)
 		snr_p++;
 		buff_length++;
 	}
-	printf("snr done\n");
+	// printf("snr done\n");
 
 	uint8_t *y_p = (uint8_t *)(package->y);
 	for (int i = 0; i < SIZE_Y; i++)
@@ -1407,7 +1410,8 @@ int buff_to_package(struct package_t *package, unsigned char *buff)
 			package->data[j][i] = *buff_p;
 			buff_p++;
 			data_p++;
-			// printf("buff_length:%d\n",buff_length);
+			// fprintf(rx_buff_file,"buff_length:%d\n",buff_length);
+			// printf("buff_length:%d\n", buff_length);
 			buff_length++;
 		}
 		// printf("data%d done\n", j);

@@ -36,7 +36,6 @@ sem_t tx_prepared;
 sem_t rx_prepared;
 sem_t tx_buff_prepared;
 sem_t rx_buff_prepared;
-
 sem_t cache_tx;
 sem_t buffisnotEmpty;
 
