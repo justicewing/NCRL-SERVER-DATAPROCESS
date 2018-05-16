@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99999 (TeX Live 2018/W32TeX) (preloaded format=xelatex 2018.5.4)  16 MAY 2018 22:11
+This is XeTeX, Version 3.14159265-2.6-0.99999 (TeX Live 2018/W32TeX) (preloaded format=xelatex 2018.5.4)  16 MAY 2018 23:04
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1360,16 +1360,76 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 File: frame_mbuf.pdf Graphic file (type pdf)
 <use frame_mbuf.pdf>
- [1
 
-] (./20180517.aux) ) 
+Underfull \hbox (badness 10000) in paragraph at lines 81--83
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 84--86
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 87--89
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 92--94
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 95--97
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 98--100
+
+ []
+
+[1
+
+]
+Underfull \hbox (badness 10000) in paragraph at lines 101--103
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 104--106
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 109--110
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 111--112
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 115--117
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 118--120
+
+ []
+
+[2] (./20180517.aux) ) 
 Here is how much of TeX's memory you used:
- 17390 strings out of 492970
- 376926 string characters out of 6137299
- 453148 words of memory out of 5000000
- 21198 multiletter control sequences out of 15000+600000
+ 17430 strings out of 492970
+ 379608 string characters out of 6137299
+ 455148 words of memory out of 5000000
+ 21238 multiletter control sequences out of 15000+600000
  535167 words of font info for 59 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  53i,6n,68p,10501b,259s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on 20180517.pdf (1 page).
+Output written on 20180517.pdf (2 pages).
