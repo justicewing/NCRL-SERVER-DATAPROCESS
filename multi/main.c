@@ -37,6 +37,7 @@ sem_t rx_prepared;
 sem_t tx_buff_prepared;
 sem_t rx_buff_prepared;
 sem_t cache_tx;
+sem_t cache_rx;
 sem_t buffisnotEmpty;
 
 int main()
@@ -53,12 +54,13 @@ int main()
 	sem_init(&tx_can_be_destroyed, 0, 0);
 	sem_init(&rx_can_be_destroyed, 0, 0);
 	sem_init(&tx_buff_can_be_destroyed, 0, 0);
-	// sem_init(&rx_buff_can_be_destroyed, 0, 0);
+	sem_init(&rx_buff_can_be_destroyed, 0, 0);
 	sem_init(&tx_prepared, 0, 0);
 	sem_init(&rx_prepared, 0, 0);
 	sem_init(&tx_buff_prepared, 0, 0);
-	// sem_init(&rx_buff_prepared, 0, 0);
+	sem_init(&rx_buff_prepared, 0, 0);
 	sem_init(&cache_tx, 0, 0);
+	sem_init(&cache_rx, 0, 0);
 	sem_init(&buffisnotEmpty, 0, 0);
 
 	/* 初始化线程池 */
@@ -108,6 +110,7 @@ int main()
 	sem_destroy(&tx_buff_prepared);
 	sem_destroy(&rx_buff_prepared);
 	sem_destroy(&cache_tx);
+	sem_destroy(&cache_rx);
 	sem_destroy(&buffisnotEmpty);
 
 	return 0;

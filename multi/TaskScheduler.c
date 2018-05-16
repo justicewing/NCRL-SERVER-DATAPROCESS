@@ -32,13 +32,17 @@ extern sem_t rx_can_be_destroyed;
 extern sem_t tx_buff_prepared;
 extern sem_t rx_buff_prepared;
 extern sem_t cache_tx;
+extern sem_t cache_rx;
 #define PARA_NUM_TX 2 // 发送端同时处理子帧上限
 #define PARA_NUM_RX 5 // 接收端同时处理子帧上限
 const int SBNum = 50; // 信道估计相关
 //test
 struct package_t package_tx[PACK_CACHE];
+struct package_t package_rx[PACK_CACHE];
 int index_tx_write; // 发送段缓存写指针
 int index_rx_read;  // 接收端缓存读指针
+int index_tx_read;
+int index_rx_write;
 lapack_complex_float *H[1];
 const int testError = 100;
 const int testTime = 100;
@@ -46,10 +50,13 @@ struct RunTime runtime;
 int readyNum_tx;
 int readyNum_rx;
 int startNum_tx;
+int startNum_rx;
 pthread_mutex_t mutex_startNum_tx;
+pthread_mutex_t mutex_startNum_rx;
 pthread_mutex_t mutex_readyNum_tx;
 pthread_mutex_t mutex_readyNum_rx;
 int runIndex = 0;
+int buffisEmpty;
 
 const int CQI_mod[16] = {0, 2, 2, 2, 2, 2, 2, 4, 4, 4, 6, 6, 6, 6, 6, 6};
 const int CQI_cod[16] = {0, 78, 120, 193, 308, 449, 602, 378, 490, 616, 466, 567, 666, 772, 873, 948};
@@ -654,7 +661,17 @@ void TaskScheduler_rx(void *arg)
 	//--------------------Initialize parameters--------------------
 	//-----simulation-----
 	index_rx_read = 0;
-	pthread_mutex_init(&mutex_readyNum_tx, NULL);
+	for (int p = 0; p < PACK_CACHE; p++)
+	{
+		package_rx[p].tbs = (int *)malloc(sizeof(int) * MAX_BEAM);
+		package_rx[p].CQI_index = (int *)malloc(sizeof(int) * MAX_BEAM);
+		package_rx[p].y = (lapack_complex_float *)malloc(SIZE_Y);
+		for (int j = 0; j < MAX_BEAM; j++)
+			package_rx[p].data[j] =
+				(uint8_t *)malloc(sizeof(uint8_t) * MAX_DATA_LEN_TX +
+								  CRC_LENGTH);
+	}
+
 	struct test_rx_t *test_rx = (struct test_rx_t *)malloc(sizeof(struct test_rx_t) * PARA_NUM_RX);
 
 	//  1.1  Unpacking
@@ -671,7 +688,7 @@ void TaskScheduler_rx(void *arg)
 			cb_rx[i][j] = (srslte_cbsegm_t *)malloc(sizeof(srslte_cbsegm_t));
 		}
 	}
-	int index_tx_write = 1, index_rx_read = 0;
+	// int index_tx_write = 1, index_rx_read = 0;
 	//printf("Unpacking initialized \n");
 	//  1.2  channel estimating - signal detecting
 	lapack_complex_float *CFR_SB[PARA_NUM_RX][SBNum];
@@ -864,33 +881,41 @@ void TaskScheduler_rx(void *arg)
 	// omp_set_num_threads(1);
 	if (TIME_EN == 1)
 		gettimeofday(&rx_begin, NULL); //--------------------rx
+	sem_wait(&cache_rx);
+	static int cnt = 0;
 	while (1)
 	{
+
 		//sleep(1);
 		//if(runIndex == 3000) break;
 		for (int n = 0; n < PARA_NUM_RX; n++)
 		{
+			// printf("n:%d\n",n);
 
 			//  1.2  channel estimating - signal detecting
-			if (ServiceEN_rx[n * TASK_NUM_RX] == LayerNum && readyNum_tx > 0)
+			if (ServiceEN_rx[n * TASK_NUM_RX] == LayerNum && readyNum_rx > 0)
 			{ //有数据需要处理，且任务添加器(n,1)打开
 				// if (readyNum_tx > 1)
 				// 	index_rx_read = index_tx_write;
 				// else
 				// 	index_rx_read = 0;
+				// printf("CNT:%d,tx_write:%d,tx_read:%d,rx_write:%d,rx_read:%d\n",
+				// 	   ++cnt, index_tx_write, index_tx_read, index_rx_write, index_rx_read);
+				// printf("\tstart_tx:%d,ready_tx:%d,start_rx:%d,ready_rx:%d,empty:%d\n",
+				// 	   startNum_tx, readyNum_tx, startNum_rx, readyNum_rx, buffisEmpty);
 				for (int i = 0; i < LayerNum; ++i)
 				{
-					srslte_cbsegm(cb_rx[n][i], package_tx[index_rx_read].tbs[i]);
-					CQI_index[n * MAX_BEAM + i] = package_tx[index_rx_read].CQI_index[i];
-					test_rx[n].data[i] = package_tx[index_rx_read].data[i];
+					srslte_cbsegm(cb_rx[n][i], package_rx[index_rx_read].tbs[i]);
+					CQI_index[n * MAX_BEAM + i] = package_rx[index_rx_read].CQI_index[i];
+					test_rx[n].data[i] = package_rx[index_rx_read].data[i];
 					SymbolBitN_L[n][i] = CQI_mod[CQI_index[n * MAX_BEAM + i]];
 					// test_rx[n].packIdx = index_rx_read;
 				}
-				test_rx[n].SNR = package_tx[index_rx_read].SNR;
+				test_rx[n].SNR = package_rx[index_rx_read].SNR;
 				for (int i = 0; i < SBNum; ++i)
 				{
 					int j = n * SBNum + i;
-					chest_calsym_args[j].package = package_tx[index_rx_read].y;
+					chest_calsym_args[j].package = package_rx[index_rx_read].y;
 					chest_calsym_args[j].SBindex = i;
 					chest_calsym_args[j].SBNum = SBNum;
 
@@ -938,12 +963,12 @@ void TaskScheduler_rx(void *arg)
 				//printf("\nrx%d get package %d", n, index_tx_write);
 				//if (index_rx_read != 0)
 				//{
-				pthread_mutex_lock(&mutex_readyNum_tx);
-				readyNum_tx--;
-				pthread_mutex_unlock(&mutex_readyNum_tx);
+				pthread_mutex_lock(&mutex_readyNum_rx);
+				readyNum_rx--;
+				pthread_mutex_unlock(&mutex_readyNum_rx);
 				index_rx_read++;
 				//}
-				if (index_rx_read == PACK_CACHE)
+				if (index_rx_read >= PACK_CACHE)
 					index_rx_read = 0;
 			}
 
@@ -959,9 +984,13 @@ void TaskScheduler_rx(void *arg)
 				for (int i = 0; i < LayerNum; i++)
 				{
 					int c = 0;
+					// printf("1i = %d\n", i);
 					rm_data_len_rx[n][i] = MAX_SYMBOL_NUM * CQI_mod[CQI_index[n * MAX_BEAM + i]];
+					// printf("2i = %d\n", i);
 					Lamda = MAX_SYMBOL_NUM % cb_rx[n][i]->C;
+					// printf("3i = %d\n", i);
 					cbtaskNum[n] += cb_rx[n][i]->C;
+					// printf("4i = %d\n", i);
 					for (int r = 0; r < (cb_rx[n][i]->C); ++r)
 					{
 						int j = i * cbNum + r;
@@ -1014,16 +1043,17 @@ void TaskScheduler_rx(void *arg)
 						derm_crc_args[jp].ServiceEN_rx = ServiceEN_rx;
 
 						pool_add_task(derm_crc, (void *)&derm_crc_args[jp], 3);
+						// printf("r = %d\n", r);
 					}
+					// printf("i = %d\n\n", i);
 				}
 				ServiceEN_rx[n * TASK_NUM_RX + 1] = 0;
 			}
-			//printf("\n%d = %d?",ServiceEN_rx[n * TASK_NUM_RX + 2],cbtaskNum[n]);
+			// printf("\n%d = %d?",ServiceEN_rx[n * TASK_NUM_RX + 2],cbtaskNum[n]);
 
 			//  1.4  code block desegmentation - crc check
 			if (ServiceEN_rx[n * TASK_NUM_RX + 2] == cbtaskNum[n] && cbtaskNum[n] != 0)
 			{
-
 				for (int i = 0; i < LayerNum; i++)
 				{
 					int j = n * LayerNum + i;
@@ -1094,6 +1124,7 @@ void TaskScheduler_rx(void *arg)
 					if (BLER_EN == 1 || BER_EN == 1)
 					{ //------Error information
 						count_ms++;
+
 						if (count_ms == testError)
 						{
 							printf("\n--------------------No.%d~%d--------------------", runIndex + 2 - testError, runIndex + 1);
@@ -1160,9 +1191,9 @@ void TaskScheduler_rx(void *arg)
 				}
 				BERsignal[n] = 0;
 				ServiceEN_rx[n * TASK_NUM_RX] = LayerNum;
-				pthread_mutex_lock(&mutex_startNum_tx);
-				startNum_tx--;
-				pthread_mutex_unlock(&mutex_startNum_tx);
+				pthread_mutex_lock(&mutex_startNum_rx);
+				startNum_rx--;
+				pthread_mutex_unlock(&mutex_startNum_rx);
 			}
 		}
 	}
@@ -1177,7 +1208,7 @@ void TaskScheduler_rx(void *arg)
 uint8_t *mbuf;
 // extern uint8_t *mbuf;
 
-int index_read_tx;
+// int index_tx_read;
 // extern int readyNum_tx;
 // extern int startNum_tx;
 // extern struct package_t *package_tx;
@@ -1188,7 +1219,7 @@ extern sem_t tx_buff_can_be_destroyed;
 // extern sem_t tx_buff_prepared;
 extern sem_t buffisnotEmpty;
 
-int buffisEmpty;
+// int buffisEmpty;
 pthread_mutex_t mutex_buffisEmpty;
 
 int package_to_buff(struct package_t *package, uint8_t *buff_p);
@@ -1196,33 +1227,33 @@ int package_to_buff(struct package_t *package, uint8_t *buff_p);
 void Tx_buff(void *arg)
 {
 	// printf("tx buff start\n");
-	index_read_tx = 0;
+	index_tx_read = 0;
 	buffisEmpty = 1;
 	mbuf = (unsigned char *)malloc(MAX_MBUFF);
 	pthread_mutex_init(&mutex_buffisEmpty, NULL);
 	printf("Tx buff prepared...\n");
 	sem_post(&tx_buff_prepared);
 	sem_wait(&tx_prepared);
-	printf("tx buff start\n");
+	// printf("tx buff start\n");
 	while (1)
 	{
 		// printf("aaaaaa……\n");
-		// if (readyNum_tx == 0)
-		sem_wait(&cache_tx);
+		if (readyNum_tx == 0)
+			sem_wait(&cache_tx);
 		if (readyNum_tx > 0 && buffisEmpty)
 		{
-			printf("\ntx buff circle start:%d\n", index_read_tx);
-			package_to_buff(&package_tx[index_read_tx], mbuf);
-			printf("\ntx buff down:%d\n", index_read_tx);
-			index_read_tx++;
-			if (index_read_tx >= PACK_CACHE)
-				index_read_tx = 0;
-			// pthread_mutex_lock(&mutex_readyNum_tx);
-			// readyNum_tx--;
-			// pthread_mutex_unlock(&mutex_readyNum_tx);
-			// pthread_mutex_lock(&mutex_startNum_tx);
-			// startNum_tx--;
-			// pthread_mutex_unlock(&mutex_startNum_tx);
+			// printf("\ntx buff circle start:%d\n", index_tx_read);
+			package_to_buff(&package_tx[index_tx_read], mbuf);
+			// printf("\ntx buff down:%d\n", index_tx_read);
+			index_tx_read++;
+			if (index_tx_read >= PACK_CACHE)
+				index_tx_read = 0;
+			pthread_mutex_lock(&mutex_readyNum_tx);
+			readyNum_tx--;
+			pthread_mutex_unlock(&mutex_readyNum_tx);
+			pthread_mutex_lock(&mutex_startNum_tx);
+			startNum_tx--;
+			pthread_mutex_unlock(&mutex_startNum_tx);
 			pthread_mutex_lock(&mutex_buffisEmpty);
 			buffisEmpty = 0;
 			pthread_mutex_unlock(&mutex_buffisEmpty);
@@ -1243,7 +1274,7 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 	// printf("size of tbs:%ld\n", sizeof(package->tbs));
 
 	uint8_t *tbs_p = (uint8_t *)(package->tbs);
-	for (int i = 0; i < MAX_BEAM; i++)
+	for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
 	{
 		*buff_p = *tbs_p;
 		buff_p++;
@@ -1314,47 +1345,45 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 extern sem_t rx_can_be_destroyed;
 // extern sem_t rx_buff_prepared;
 // pthread_mutex_t mutex_readyNum_rx;
-int index_write_rx;
+// int index_rx_write;
 // int readyNum_rx;
-struct package_t package_rx[PACK_CACHE];
+// struct package_t package_rx[PACK_CACHE];
 int buff_to_package(struct package_t *package, unsigned char *buff_p);
 // FILE *rx_buff_file;
 
 void Rx_buff(void *arg)
 {
 	// rx_buff_file = fopen("Rx_buff_log.txt", "w");
-	readyNum_rx = 0;
-	index_write_rx = 0;
+	readyNum_rx = 0, startNum_rx = 0;
+	pthread_mutex_init(&mutex_readyNum_rx, NULL);
+	pthread_mutex_init(&mutex_startNum_rx, NULL);
+	index_rx_write = 0;
 	// printf("rx buff start\n");
-	for (int p = 0; p < PACK_CACHE; p++)
-	{
-		package_rx[p].tbs = (int *)malloc(sizeof(int) * MAX_BEAM);
-		package_rx[p].CQI_index = (int *)malloc(sizeof(int) * MAX_BEAM);
-		package_rx[p].y = (lapack_complex_float *)malloc(SIZE_Y);
-		for (int j = 0; j < MAX_BEAM; j++)
-			package_rx[p].data[j] =
-				(uint8_t *)malloc(sizeof(uint8_t) * MAX_DATA_LEN_TX +
-								  CRC_LENGTH);
-	}
-	printf("rx buff is ready...\n");
+	printf("rx buff prepared...\n");
 	sem_post(&rx_buff_prepared);
 	sem_wait(&rx_prepared);
-	printf("rx buff start\n");
+	// printf("rx buff start\n");
 	while (1)
 	{
 		if (buffisEmpty)
 			sem_wait(&buffisnotEmpty);
-		if (readyNum_rx < PACK_CACHE && (!buffisEmpty))
+		if (startNum_rx < PACK_CACHE && (!buffisEmpty))
 		{
-			printf("\nrx buff circle start:%d\n", index_write_rx);
-			buff_to_package(&package_rx[index_write_rx], mbuf);
-			printf("\nrx buff down:%d\n", index_write_rx);
-			index_write_rx++;
-			if (index_write_rx >= PACK_CACHE)
-				index_write_rx = 0;
+			pthread_mutex_lock(&mutex_startNum_rx);
+			startNum_rx++;
+			pthread_mutex_unlock(&mutex_startNum_rx);
+			// printf("\nrx buff circle start:%d\n", index_rx_write);
+			// printf("startNum_rx = %d\n", startNum_rx);
+			// printf("readyNum_rx = %d\n", readyNum_rx);
+			buff_to_package(&package_rx[index_rx_write], mbuf);
+			// printf("\nrx buff down:%d\n", index_rx_write);
+			index_rx_write++;
+			if (index_rx_write >= PACK_CACHE)
+				index_rx_write = 0;
 			pthread_mutex_lock(&mutex_readyNum_rx);
 			readyNum_rx++;
 			pthread_mutex_unlock(&mutex_readyNum_rx);
+			sem_post(&cache_rx);
 			pthread_mutex_lock(&mutex_buffisEmpty);
 			buffisEmpty = 1;
 			pthread_mutex_unlock(&mutex_buffisEmpty);
@@ -1369,7 +1398,7 @@ int buff_to_package(struct package_t *package, unsigned char *buff)
 	int buff_length = 0;
 
 	uint8_t *tbs_p = (uint8_t *)(package->tbs);
-	for (int i = 0; i < MAX_BEAM; i++)
+	for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
 	{
 		*tbs_p = *buff_p;
 		buff_p++;
