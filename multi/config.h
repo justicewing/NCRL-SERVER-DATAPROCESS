@@ -30,13 +30,13 @@
 #define MIN_CQI_MOD 2
 
 #define MAX_SYMBOL_NUM (CARRIER_NUM * DATA_SYM_NUM)
-#define MAX_DATA_LEN_TX (MAX_CQI_COD / 1024.0 * MAX_SYMBOL_NUM * MAX_CQI_MOD - CRC_LENGTH)
+#define MAX_DATA_LEN_TX  (MAX_SYMBOL_NUM * MAX_CQI_MOD - CRC_LENGTH)
 #define MAX_RM_DATA_LEN_TX (MAX_SYMBOL_NUM * MAX_CQI_MOD)
 #define MAX_MOD_DATA_LEN_TX (MAX_RM_DATA_LEN_TX / MIN_CQI_MOD)
-#define MAX_DATA_LEN_RX (MAX_CQI_COD / 1024.0 * MAX_SYMBOL_NUM * MAX_CQI_MOD - CRC_LENGTH)
+#define MAX_DATA_LEN_RX (MAX_SYMBOL_NUM * MAX_CQI_MOD - CRC_LENGTH)
 
 #define MAX_MBUFF (2 * MAX_BEAM * sizeof(int) + sizeof(float) + \
-				   MAX_BEAM * CARRIER_NUM * SYMBOL_NUM * sizeof(lapack_complex_float))
+				   MAX_BEAM * CARRIER_NUM * SYMBOL_NUM * sizeof(lapack_complex_float) + MAX_BEAM * (MAX_DATA_LEN_TX + CRC_LENGTH))
 
 #define PACK_CACHE 20 // 缓存
 //  0 : D  12408 = 1128 * 11
@@ -52,7 +52,7 @@
 
 struct package_t
 {
-	uint8_t *data[8];
+	uint8_t *data[MAX_BEAM];
 	lapack_complex_float *y;
 	int *tbs;
 	int *CQI_index;

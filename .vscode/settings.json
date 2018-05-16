@@ -18,7 +18,8 @@
         "errno.h": "c",
         "semaphore.h": "c",
         "pthread.h": "c",
-        "system_error": "c"
+        "system_error": "c",
+        "config.h": "c"
     },
     "matlab-formatter.path": "C:\\Users\\Sherl\\.vscode\\extensions\\AffenWiesel.matlab-formatter-1.1.4\\formatter\\matlab_formatter.py"
 }
