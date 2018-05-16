@@ -37,6 +37,9 @@ sem_t rx_prepared;
 sem_t tx_buff_prepared;
 sem_t rx_buff_prepared;
 
+sem_t cache_tx;
+sem_t buffisnotEmpty;
+
 int main()
 {
 
@@ -51,11 +54,13 @@ int main()
 	sem_init(&tx_can_be_destroyed, 0, 0);
 	sem_init(&rx_can_be_destroyed, 0, 0);
 	sem_init(&tx_buff_can_be_destroyed, 0, 0);
-	sem_init(&rx_buff_can_be_destroyed, 0, 0);
+	// sem_init(&rx_buff_can_be_destroyed, 0, 0);
 	sem_init(&tx_prepared, 0, 0);
 	sem_init(&rx_prepared, 0, 0);
 	sem_init(&tx_buff_prepared, 0, 0);
-	sem_init(&rx_buff_prepared, 0, 0);
+	// sem_init(&rx_buff_prepared, 0, 0);
+	sem_init(&cache_tx, 0, 0);
+	sem_init(&buffisnotEmpty, 0, 0);
 
 	/* 初始化线程池 */
 	pool_init(0, 1, 0);
@@ -68,8 +73,8 @@ int main()
 	printf("creat pool 3...\n");
 	pool_init(2 + threadNum_tx + threadNum_rx, 1, 4);
 	printf("creat pool 4...\n");
-	pool_init(3 + threadNum_tx + threadNum_rx, 1, 5);
-	printf("creat pool 4...\n");
+	// pool_init(3 + threadNum_tx + threadNum_rx, 1, 5);
+	// printf("creat pool 4...\n");
 
 	/* 添加发送端主任务 */
 	pool_add_task(TaskScheduler_tx, NULL, 0);
@@ -81,8 +86,8 @@ int main()
 	pool_add_task(Tx_buff, NULL, 4);
 	printf("add rx taskScheduler to pool 4...\n");
 	/* 添加发送端缓存任务 */
-	pool_add_task(Rx_buff, NULL, 5);
-	printf("add rx taskScheduler to pool 5...\n");
+	// pool_add_task(Rx_buff, NULL, 5);
+	// printf("add rx taskScheduler to pool 5...\n");
 
 	/* 等待信号销毁线程 */
 	sem_wait(&tx_can_be_destroyed);
@@ -91,18 +96,20 @@ int main()
 	pool_destroy(1);
 	sem_wait(&tx_buff_can_be_destroyed);
 	pool_destroy(4);
-	sem_wait(&rx_buff_can_be_destroyed);
-	pool_destroy(5);
+	// sem_wait(&rx_buff_can_be_destroyed);
+	// pool_destroy(5);
 
 	/* 销毁信号量*/
 	sem_destroy(&tx_can_be_destroyed);
 	sem_destroy(&rx_can_be_destroyed);
 	sem_destroy(&tx_buff_can_be_destroyed);
-	sem_destroy(&rx_buff_can_be_destroyed);
+	// sem_destroy(&rx_buff_can_be_destroyed);
 	sem_destroy(&tx_prepared);
 	sem_destroy(&rx_prepared);
 	sem_destroy(&tx_buff_prepared);
-	sem_destroy(&rx_buff_prepared);
+	// sem_destroy(&rx_buff_prepared);
+	sem_destroy(&cache_tx);
+	sem_destroy(&buffisnotEmpty);
 
 	return 0;
 }

@@ -29,6 +29,7 @@ extern sem_t tx_prepared;
 extern sem_t rx_prepared;
 extern sem_t tx_can_be_destroyed;
 extern sem_t rx_can_be_destroyed;
+extern sem_t cache_tx;
 #define PARA_NUM_TX 2 // 发送端同时处理子帧上限
 #define PARA_NUM_RX 5 // 接收端同时处理子帧上限
 const int SBNum = 50; // 信道估计相关
@@ -627,6 +628,7 @@ void TaskScheduler_tx(void *arg)
 				pthread_mutex_lock(&mutex_readyNum_tx);
 				readyNum_tx++;
 				pthread_mutex_unlock(&mutex_readyNum_tx);
+				sem_post(&cache_tx);
 				index_tx_write++;
 				if (index_tx_write >= PACK_CACHE)
 					index_tx_write = 0;
@@ -1155,9 +1157,9 @@ void TaskScheduler_rx(void *arg)
 	freeQAMtable();
 }
 
-/**************************************************************************/
-/*****************************Tx_buff**************************************/
-/**************************************************************************/
+/*******************************************************************************************************/
+/************************************************Tx_buff************************************************/
+/*******************************************************************************************************/
 
 uint8_t *mbuf;
 // extern uint8_t *mbuf;
@@ -1171,6 +1173,7 @@ int index_read_tx;
 extern sem_t tx_buff_can_be_destroyed;
 // extern sem_t tx_prepared;
 extern sem_t tx_buff_prepared;
+extern sem_t buffisnotEmpty;
 
 int buffisEmpty;
 pthread_mutex_t mutex_buffisEmpty;
@@ -1190,7 +1193,9 @@ void Tx_buff(void *arg)
 	printf("tx buff start\n");
 	while (1)
 	{
-		printf("aaaaaa……\n");
+		// printf("aaaaaa……\n");
+		if (readyNum_tx == 0)
+			sem_wait(&cache_tx);
 		if (readyNum_tx > 0 && buffisEmpty)
 		{
 			printf("\n\n\ntx buff circle start\n\n\n\n");
@@ -1207,6 +1212,8 @@ void Tx_buff(void *arg)
 			pthread_mutex_lock(&mutex_buffisEmpty);
 			buffisEmpty = 0;
 			pthread_mutex_lock(&mutex_buffisEmpty);
+			sem_post(&buffisnotEmpty);
+			printf("buffisEmpty:%d\n", buffisEmpty);
 			printf("tx buff circle end\n");
 		}
 	}
@@ -1254,7 +1261,7 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 		snr_p++;
 		buff_length++;
 	}
-	printf("snr done\n");
+	// printf("snr done\n");
 
 	uint8_t *y_p = (uint8_t *)(package->y);
 	for (int i = 0; i < SIZE_Y; i++)
@@ -1278,7 +1285,7 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 			*buff_p = package->data[j][i];
 			buff_p++;
 			data_p++;
-			printf("buff_length:%d\n", buff_length);
+			// printf("buff_length:%d\n", buff_length);
 			buff_length++;
 		}
 		// printf("data%d done\n", j);
@@ -1300,7 +1307,8 @@ int buff_to_package(struct package_t *package, unsigned char *buff_p);
 
 void Rx_buff(void *arg)
 {
-	readyNum_rx = 0;	
+	readyNum_rx = 0;
+	index_write_rx = 0;
 	// printf("rx buff start\n");
 	for (int p = 0; p < PACK_CACHE; p++)
 	{
@@ -1318,9 +1326,11 @@ void Rx_buff(void *arg)
 	printf("rx buff start\n");
 	while (1)
 	{
+		if (buffisEmpty)
+			sem_wait(&buffisnotEmpty);
 		if (readyNum_rx <= PACK_CACHE && (!buffisEmpty))
 		{
-			printf("rx buff circle start\n");
+			printf("\n\n\nrx buff circle start\n\n\n\n");
 			buff_to_package(&package_rx[index_write_rx], mbuf);
 			index_write_rx++;
 			if (index_write_rx >= PACK_CACHE)
