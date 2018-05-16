@@ -44,9 +44,11 @@ const int testError = 100;
 const int testTime = 100;
 struct RunTime runtime;
 int readyNum_tx;
+int readyNum_rx;
 int startNum_tx;
 pthread_mutex_t mutex_startNum_tx;
 pthread_mutex_t mutex_readyNum_tx;
+pthread_mutex_t mutex_readyNum_rx;
 int runIndex = 0;
 
 const int CQI_mod[16] = {0, 2, 2, 2, 2, 2, 2, 4, 4, 4, 6, 6, 6, 6, 6, 6};
@@ -643,12 +645,16 @@ void TaskScheduler_tx(void *arg)
 	sem_post(&tx_can_be_destroyed);
 }
 
+/************************************************************************************************/
+/************************************************************************************************/
+/************************************************************************************************/
 void TaskScheduler_rx(void *arg)
 {
 
 	//--------------------Initialize parameters--------------------
 	//-----simulation-----
 	index_rx_read = 0;
+	pthread_mutex_init(&mutex_readyNum_tx, NULL);
 	struct test_rx_t *test_rx = (struct test_rx_t *)malloc(sizeof(struct test_rx_t) * PARA_NUM_RX);
 
 	//  1.1  Unpacking
@@ -1307,9 +1313,9 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 /**************************************************************************/
 extern sem_t rx_can_be_destroyed;
 // extern sem_t rx_buff_prepared;
-pthread_mutex_t mutex_readyNum_rx;
+// pthread_mutex_t mutex_readyNum_rx;
 int index_write_rx;
-int readyNum_rx;
+// int readyNum_rx;
 struct package_t package_rx[PACK_CACHE];
 int buff_to_package(struct package_t *package, unsigned char *buff_p);
 // FILE *rx_buff_file;
@@ -1342,7 +1348,7 @@ void Rx_buff(void *arg)
 		{
 			printf("\nrx buff circle start:%d\n", index_write_rx);
 			buff_to_package(&package_rx[index_write_rx], mbuf);
-			printf("\nrx buff down:%d", index_write_rx);
+			printf("\nrx buff down:%d\n", index_write_rx);
 			index_write_rx++;
 			if (index_write_rx >= PACK_CACHE)
 				index_write_rx = 0;
