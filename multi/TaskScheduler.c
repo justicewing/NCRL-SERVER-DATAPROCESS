@@ -29,6 +29,8 @@ extern sem_t tx_prepared;
 extern sem_t rx_prepared;
 extern sem_t tx_can_be_destroyed;
 extern sem_t rx_can_be_destroyed;
+extern sem_t tx_buff_prepared;
+extern sem_t rx_buff_prepared;
 extern sem_t cache_tx;
 #define PARA_NUM_TX 2 // 发送端同时处理子帧上限
 #define PARA_NUM_RX 5 // 接收端同时处理子帧上限
@@ -345,6 +347,7 @@ void TaskScheduler_tx(void *arg)
 	sem_post(&tx_prepared);
 	sem_post(&tx_prepared);
 	sem_wait(&rx_prepared);
+	sem_wait(&tx_buff_prepared);
 	//--------------------Data processing--------------------
 	ServiceEN_tx = (int *)malloc(sizeof(int) * PARA_NUM_TX * TASK_NUM_TX);
 	for (int i = 0; i < PARA_NUM_TX; i++)
@@ -850,6 +853,7 @@ void TaskScheduler_rx(void *arg)
 	sem_post(&rx_prepared);
 	sem_post(&rx_prepared);
 	sem_wait(&tx_prepared);
+	sem_wait(&rx_buff_prepared);
 
 	// omp_set_num_threads(1);
 	if (TIME_EN == 1)
@@ -1175,7 +1179,7 @@ int index_read_tx;
 // extern pthread_mutex_t mutex_startNum_tx;
 extern sem_t tx_buff_can_be_destroyed;
 // extern sem_t tx_prepared;
-extern sem_t tx_buff_prepared;
+// extern sem_t tx_buff_prepared;
 extern sem_t buffisnotEmpty;
 
 int buffisEmpty;
@@ -1302,7 +1306,7 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 /*****************************Rx_buff**************************************/
 /**************************************************************************/
 extern sem_t rx_can_be_destroyed;
-extern sem_t rx_buff_prepared;
+// extern sem_t rx_buff_prepared;
 pthread_mutex_t mutex_readyNum_rx;
 int index_write_rx;
 int readyNum_rx;
