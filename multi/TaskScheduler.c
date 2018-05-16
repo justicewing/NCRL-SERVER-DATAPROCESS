@@ -846,8 +846,11 @@ void TaskScheduler_rx(void *arg)
 	}
 	for (int i = 0; i < PARA_NUM_RX; i++)
 		ServiceEN_rx[TASK_NUM_RX * i] = LayerNum;
+
+	sem_post(&rx_prepared);
 	sem_post(&rx_prepared);
 	sem_wait(&tx_prepared);
+
 	// omp_set_num_threads(1);
 	if (TIME_EN == 1)
 		gettimeofday(&rx_begin, NULL); //--------------------rx
@@ -1307,6 +1310,7 @@ int buff_to_package(struct package_t *package, unsigned char *buff_p);
 
 void Rx_buff(void *arg)
 {
+	FILE *rx_buff_file = fopen("Rx_buff_log.txt", "w");
 	readyNum_rx = 0;
 	index_write_rx = 0;
 	// printf("rx buff start\n");
@@ -1328,9 +1332,9 @@ void Rx_buff(void *arg)
 	{
 		if (buffisEmpty)
 			sem_wait(&buffisnotEmpty);
-		if (readyNum_rx <= PACK_CACHE && (!buffisEmpty))
+		if (readyNum_rx < PACK_CACHE && (!buffisEmpty))
 		{
-			printf("\n\n\nrx buff circle start\n\n\n\n");
+			fprintf(rx_buff_file,"\n\n\nrx buff circle start\n\n\n\n");
 			buff_to_package(&package_rx[index_write_rx], mbuf);
 			index_write_rx++;
 			if (index_write_rx >= PACK_CACHE)
