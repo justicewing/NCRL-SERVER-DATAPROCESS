@@ -1,7 +1,7 @@
 multi/channel/*
 single/channel/*
-multi_d/channel/*
+multi_old/channel/*
 *.[oa]
 single/main
 multi/main
-multi_d/main
+multi_old/main

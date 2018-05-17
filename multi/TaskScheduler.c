@@ -1231,7 +1231,7 @@ void Tx_buff(void *arg)
 	buffisEmpty = 1;
 	mbuf = (unsigned char *)malloc(MAX_MBUFF);
 	pthread_mutex_init(&mutex_buffisEmpty, NULL);
-	printf("Tx buff prepared...\n");
+	printf("Tx Buff prepared...\n");
 	sem_post(&tx_buff_prepared);
 	sem_wait(&tx_prepared);
 	// printf("tx buff start\n");
@@ -1359,7 +1359,7 @@ void Rx_buff(void *arg)
 	pthread_mutex_init(&mutex_startNum_rx, NULL);
 	index_rx_write = 0;
 	// printf("rx buff start\n");
-	printf("rx buff prepared...\n");
+	printf("Rx Buff prepared...\n");
 	sem_post(&rx_buff_prepared);
 	sem_wait(&rx_prepared);
 	// printf("rx buff start\n");

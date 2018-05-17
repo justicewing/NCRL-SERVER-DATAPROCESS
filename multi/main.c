@@ -79,16 +79,16 @@ int main()
 
 	/* 添加发送端主任务 */
 	pool_add_task(TaskScheduler_tx, NULL, 0);
-	printf("add tx taskScheduler to pool 0...\n");
+	printf("add Tx TaskScheduler to pool 0...\n");
 	/* 添加接收端主任务 */
 	pool_add_task(TaskScheduler_rx, NULL, 1);
-	printf("add rx taskScheduler to pool 1...\n");
+	printf("add Rx TaskScheduler to pool 1...\n");
 	/* 添加发送端缓存任务 */
 	pool_add_task(Tx_buff, NULL, 4);
-	printf("add rx taskScheduler to pool 4...\n");
+	printf("add Tx Buff to pool 4...\n");
 	/* 添加发送端缓存任务 */
 	pool_add_task(Rx_buff, NULL, 5);
-	printf("add rx taskScheduler to pool 5...\n");
+	printf("add Rx Buff to pool 5...\n");
 
 	/* 等待信号销毁线程 */
 	sem_wait(&tx_can_be_destroyed);
