@@ -4,15 +4,26 @@
             "name": "Linux",
             "browse": {
                 "path": [
-                    "~/dpdk",
-                    "${workspaceFolder}"
+                    "/home/sherlockhsu/dpdk/lib/librte_eal/common/include",
+                    "${workspaceFolder}",
+                    "/usr/include",
+                    "/usr/local/include",
+                    "/home/sherlockhsu/dpdk/x86_64-native-linuxapp-gcc/include",
+                    "/home/sherlockhsu/dpdk",
+                    "/home/sherlockhsu/dpdk/lib",
+                    "/home/sherlockhsu/dpdk/mk"
                 ],
                 "limitSymbolsToIncludedHeaders": true
             },
             "includePath": [
+                "/home/sherlockhsu/dpdk/lib/librte_eal/common/include",
                 "${workspaceFolder}",
-                "~/dpdk/x86_64-native-linuxapp-gcc/include",
-                "${workspaceFolder}/multi"
+                "/usr/include",
+                "/usr/local/include",
+                "/home/sherlockhsu/dpdk/x86_64-native-linuxapp-gcc/include",
+                "/home/sherlockhsu/dpdk",
+                "/home/sherlockhsu/dpdk/lib",
+                "/home/sherlockhsu/dpdk/mk"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
