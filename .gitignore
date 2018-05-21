@@ -5,3 +5,5 @@ multi_old/channel/*
 single/main
 multi/main
 multi_old/main
+DPDK/workspace/dataProcess/build
+DPDK/workspace/dataProcess_1/build
