@@ -47,6 +47,8 @@ sem_t lcore_receive_prepared;
 sem_t lcore_p_prepared;
 sem_t lcore_c_prepared;
 
+int sendable;
+
 static volatile bool force_quit;
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
@@ -544,6 +546,7 @@ signal_handler(int signum)
 
 int main(int argc, char **argv)
 {
+	sendable = 1;
 	int ret;
 	uint8_t nb_ports;
 	uint8_t portid;
