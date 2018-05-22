@@ -46,8 +46,12 @@ sem_t lcore_send_prepared;
 sem_t lcore_receive_prepared;
 sem_t lcore_p_prepared;
 sem_t lcore_c_prepared;
+sem_t sendable_sem;
 
 int sendable;
+
+#define SENDABLE_FLAG 0xFF
+#define ONE_SEND_NUM 1
 
 static volatile bool force_quit;
 
@@ -192,9 +196,35 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 	uint8_t *adcnt = NULL;
 	int cnt = 0;
 
-	rte_pktmbuf_append(m, length);
+	rte_pktmbuf_append(m, length + 12);
 	for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
 		*adcnt = 0x00;
+
+	*adcnt = 0xA0;
+	adcnt++;
+	*adcnt = 0x36;
+	adcnt++;
+	*adcnt = 0x7A;
+	adcnt++;
+	*adcnt = 0x58;
+	adcnt++;
+	*adcnt = 0xAD;
+	adcnt++;
+	*adcnt = 0x76;
+	adcnt++;
+
+	*adcnt = 0xA0;
+	adcnt++;
+	*adcnt = 0x36;
+	adcnt++;
+	*adcnt = 0x9F;
+	adcnt++;
+	*adcnt = 0x58;
+	adcnt++;
+	*adcnt = 0xA6;
+	adcnt++;
+	*adcnt = 0x76;
+	adcnt++;
 
 	for (cnt = 0; cnt < length; cnt++)
 	{
@@ -374,33 +404,44 @@ l2fwd_main_p(void)
 	int indx_seg = 0;
 
 	// int total_length = 0;
-	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * SEG_SIZE * DATA_LENGTH);
+	// data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * SEG_SIZE * DATA_LENGTH);
+	// for (cnt = 0; cnt < SEG_SIZE * DATA_LENGTH / 2; cnt++)
+	// {
+	// 	data_to_be_sent[cnt * 2] = (cnt % (256 * 256)) >> 8;
+	// 	data_to_be_sent[cnt * 2 + 1] = (cnt % (256 * 256));
+	// }
 
-	for (cnt = 0; cnt < SEG_SIZE * DATA_LENGTH / 2; cnt++)
-	{
-		data_to_be_sent[cnt * 2] = (cnt % (256 * 256)) >> 8;
-		data_to_be_sent[cnt * 2 + 1] = (cnt % (256 * 256));
-	}
+	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * DATA_LENGTH);
+
+	// for (cnt = 0; cnt < DATA_LENGTH / 2; cnt++)
+	// {
+	// 	data_to_be_sent[cnt * 2] = (cnt % (256 * 256)) >> 8;
+	// 	data_to_be_sent[cnt * 2 + 1] = (cnt % (256 * 256));
+	// }
+	// data_to_be_sent[0] = 0xFF;
+
+	struct rte_mbuf *m;
+	int sendable_cnt = 0;
 
 	sem_post(&lcore_p_prepared);
 	sem_wait(&lcore_send_prepared);
 
 	while (!force_quit)
 	{
-
-		//if(packet_num_threw_in_ring>=packet_num_want_to_send)break;
-		// for (int i = 0; i < SEG_SIZE; i++)
-		// {
-		struct rte_mbuf *m;
-		m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
-		// while (m == NULL)
-		// 	m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
-		if (m == NULL)
-			printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
-		else
+		if (sendable == 0)
+			sem_wait(&sendable_sem);
+		if (sendable == 1)
 		{
-			data_to_be_sent[indx_seg * DATA_LENGTH] = pcnt;
-			package(data_to_be_sent + DATA_LENGTH * indx_seg, DATA_LENGTH, m);
+			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
+			if (m == NULL)
+			{
+				printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
+				continue;
+			}
+			// data_to_be_sent[indx_seg * DATA_LENGTH] = 0xFF;
+			// package(data_to_be_sent + DATA_LENGTH * indx_seg, DATA_LENGTH, m);
+
+			package(data_to_be_sent, DATA_LENGTH, m);
 			//	printf("total_length=  %d\n",total_length);
 
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
@@ -409,14 +450,16 @@ l2fwd_main_p(void)
 			packet_num_threw_in_ring++;
 			pcnt++;
 			indx_seg++;
+			if (indx_seg == SEG_SIZE)
+				indx_seg = 0;
+			sendable_cnt++;
+			if (sendable_cnt == ONE_SEND_NUM)
+			{
+				sendable = 0;
+				sendable_cnt = 0;
+			}
 		}
 		// }
-		if (indx_seg == SEG_SIZE)
-		{
-			indx_seg = 0;
-			
-		}
-			
 	}
 	printf("入列的包个数%d\n", packet_num_threw_in_ring);
 }
@@ -441,9 +484,16 @@ l2fwd_main_c(void)
 		else
 		{
 			adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
+			if (*adcnt == SENDABLE_FLAG)
+			{
+				sendable = 1;
+				sem_post(&sendable_sem);
+			}
 			rte_pktmbuf_free(*(struct rte_mbuf **)e);
 		}
 	}
+	// 结束后叫醒
+	sem_post(&sendable_sem);
 }
 static int
 l2fwd_launch_one_lcore_send(__attribute__((unused)) void *dummy)

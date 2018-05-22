@@ -46,15 +46,21 @@ sem_t lcore_send_prepared;
 sem_t lcore_receive_prepared;
 sem_t lcore_p_prepared;
 sem_t lcore_c_prepared;
+sem_t feedback_sem;
+
+int feedbackable;
+
+#define SENDABLE_FLAG 0xFF
+#define ONE_SEND_NUM 1
 
 static volatile bool force_quit;
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
 #define NB_MBUF 8192
-#define DATA_LENGTH (1024)
-#define SEG_SIZE (108 * 16)
-#define MBUF_SIZE (2048 + 128)
+#define DATA_LENGTH 1024
+#define SEG_SIZE 1726
+
 uint8_t *data_to_be_sent;
 
 #define MAX_PKT_BURST 32
@@ -189,8 +195,34 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 {
 	uint8_t *adcnt = NULL;
 	int cnt = 0;
+	rte_pktmbuf_append(m, length + 12);
 
-	rte_pktmbuf_append(m, length);
+	*adcnt = 0xA0;
+	adcnt++;
+	*adcnt = 0x36;
+	adcnt++;
+	*adcnt = 0x9F;
+	adcnt++;
+	*adcnt = 0x58;
+	adcnt++;
+	*adcnt = 0xA6;
+	adcnt++;
+	*adcnt = 0x76;
+	adcnt++;
+
+	*adcnt = 0xA0;
+	adcnt++;
+	*adcnt = 0x36;
+	adcnt++;
+	*adcnt = 0x7A;
+	adcnt++;
+	*adcnt = 0x58;
+	adcnt++;
+	*adcnt = 0xAD;
+	adcnt++;
+	*adcnt = 0x76;
+	adcnt++;
+
 	for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
 		*adcnt = 0x00;
 
@@ -203,23 +235,23 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 	return 0;
 }
 
-int read_from_txt(char *a, int num) //从文件中将数据读入全局数组b[]中，返回0读取成功，返回1文件不存在
-{
-	FILE *fp = NULL;
-	int i = 0;
-	fp = fopen(a, "r");
-	if (fp == NULL)
-	{
-		printf("此文件不存在");
-		return 1;
-	}
-	for (i = 0; i < num; i++)
-		fscanf(fp, "%x  ", &data_to_be_sent[i]);
-	for (i = 0; i < num; i++)
-		printf("%d   %x\n", i, data_to_be_sent[i]);
-	fclose(fp);
-	return 0;
-}
+// int read_from_txt(char *a, int num) //从文件中将数据读入全局数组b[]中，返回0读取成功，返回1文件不存在
+// {
+// 	FILE *fp = NULL;
+// 	int i = 0;
+// 	fp = fopen(a, "r");
+// 	if (fp == NULL)
+// 	{
+// 		printf("此文件不存在");
+// 		return 1;
+// 	}
+// 	for (i = 0; i < num; i++)
+// 		fscanf(fp, "%x  ", &data_to_be_sent[i]);
+// 	for (i = 0; i < num; i++)
+// 		printf("%d   %x\n", i, data_to_be_sent[i]);
+// 	fclose(fp);
+// 	return 0;
+// }
 
 static int
 l2fwd_main_loop_send(void)
@@ -372,13 +404,16 @@ l2fwd_main_p(void)
 	int indx_seg = 0;
 
 	// int total_length = 0;
-	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * SEG_SIZE * DATA_LENGTH);
+	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * DATA_LENGTH);
+	data_to_be_sent[0] = SENDABLE_FLAG;
 
-	for (cnt = 0; cnt < SEG_SIZE * DATA_LENGTH / 2; cnt++)
-	{
-		data_to_be_sent[cnt * 2] = (cnt % (256 * 256)) >> 8;
-		data_to_be_sent[cnt * 2 + 1] = (cnt % (256 * 256));
-	}
+	// for (cnt = 0; cnt < SEG_SIZE * DATA_LENGTH / 2; cnt++)
+	// {
+	// 	data_to_be_sent[cnt * 2] = (cnt % (256 * 256)) >> 8;
+	// 	data_to_be_sent[cnt * 2 + 1] = (cnt % (256 * 256));
+	// }
+	uint8_t flag = SENDABLE_FLAG;
+	struct rte_mbuf *m;
 
 	sem_post(&lcore_p_prepared);
 	sem_wait(&lcore_send_prepared);
@@ -389,30 +424,34 @@ l2fwd_main_p(void)
 		//if(packet_num_threw_in_ring>=packet_num_want_to_send)break;
 		// for (int i = 0; i < SEG_SIZE; i++)
 		// {
-		struct rte_mbuf *m;
-		m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
+
 		// while (m == NULL)
 		// 	m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
-		if (m == NULL)
-			printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
-		else
+		if (feedbackable == 0)
+			sem_wait(&feedback_sem);
+		if (feedbackable == 1)
 		{
-			data_to_be_sent[indx_seg * DATA_LENGTH] = pcnt;
-			package(data_to_be_sent + DATA_LENGTH * indx_seg, DATA_LENGTH, m);
+			// data_to_be_sent[indx_seg * DATA_LENGTH] = pcnt;
+			// package(data_to_be_sent + DATA_LENGTH * indx_seg, DATA_LENGTH, m);
 			//	printf("total_length=  %d\n",total_length);
-
+			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
+			if (m == NULL)
+			{
+				printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
+				continue;
+			}
+			package(data_to_be_sent, DATA_LENGTH, m);
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
 				; //printf("p!\n");
 
 			packet_num_threw_in_ring++;
-			pcnt++;
-			indx_seg++;
+			// pcnt++;
+			// indx_seg++;
+			// if (indx_seg == SEG_SIZE)
+			// 	indx_seg = 0;
+			feedbackable = 0;
 		}
 		// }
-		if (indx_seg == SEG_SIZE)
-		{
-			indx_seg = 0;
-		}
 	}
 	printf("入列的包个数%d\n", packet_num_threw_in_ring);
 }
@@ -425,6 +464,7 @@ l2fwd_main_c(void)
 	uint8_t *adcnt = NULL;
 	lcore_id = rte_lcore_id();
 	RTE_LOG(INFO, L2FWD, "entering main loop consume on core %u\n", lcore_id);
+	int feedback_cnt = 0;
 
 	sem_post(&lcore_c_prepared);
 	sem_wait(&lcore_receive_prepared);
@@ -437,9 +477,18 @@ l2fwd_main_c(void)
 		else
 		{
 			adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
+			feedback_cnt++;
+			if (feedback_cnt == ONE_SEND_NUM)
+			{
+				feedbackable = 1;
+				sem_post(&feedback_sem);
+				feedback_cnt = 0;
+			}
 			rte_pktmbuf_free(*(struct rte_mbuf **)e);
 		}
 	}
+	// 结束后叫醒
+	sem_post(&feedback_sem);
 }
 static int
 l2fwd_launch_one_lcore_send(__attribute__((unused)) void *dummy)
@@ -542,6 +591,7 @@ signal_handler(int signum)
 
 int main(int argc, char **argv)
 {
+	feedbackable = 1;
 	int ret;
 	uint8_t nb_ports;
 	uint8_t portid;
@@ -563,7 +613,7 @@ int main(int argc, char **argv)
 
 	/* create the mbuf pool */
 	l2fwd_pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool", NB_MBUF,
-												 MEMPOOL_CACHE_SIZE, 0, MBUF_SIZE,
+												 MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
 												 rte_socket_id());
 	printf("RTE_MBUF_DEFAULT_BUF_SIZE:%d\n", RTE_MBUF_DEFAULT_BUF_SIZE);
 	if (l2fwd_pktmbuf_pool == NULL)
@@ -665,6 +715,7 @@ int main(int argc, char **argv)
 	sem_init(&lcore_receive_prepared, 0, 0);
 	sem_init(&lcore_p_prepared, 0, 0);
 	sem_init(&lcore_c_prepared, 0, 0);
+	sem_init(&feedback_sem, 0, 0);
 
 	ret = 0;
 	/* launch tasks on lcore */

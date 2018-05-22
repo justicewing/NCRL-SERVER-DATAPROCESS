@@ -391,10 +391,13 @@ l2fwd_main_p(void)
 		// {
 		struct rte_mbuf *m;
 		m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
+		if (m == NULL)
+		{
+			printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
+			continue;
+		}
 		// while (m == NULL)
 		// 	m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
-		if (m == NULL)
-			printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 		else
 		{
 			data_to_be_sent[indx_seg * DATA_LENGTH] = pcnt;
@@ -412,9 +415,7 @@ l2fwd_main_p(void)
 		if (indx_seg == SEG_SIZE)
 		{
 			indx_seg = 0;
-			
 		}
-			
 	}
 	printf("入列的包个数%d\n", packet_num_threw_in_ring);
 }
