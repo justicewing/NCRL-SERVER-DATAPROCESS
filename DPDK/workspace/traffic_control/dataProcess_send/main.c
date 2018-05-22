@@ -414,9 +414,9 @@ l2fwd_main_p(void)
 	// 	data_to_be_sent[cnt * 2 + 1] = (cnt % (256 * 256));
 	// }
 
-	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * DATA_LENGTH);
+	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * DATA_LENGTH * SEG_SIZE);
 
-	for (cnt = 0; cnt < DATA_LENGTH; cnt++)
+	for (cnt = 0; cnt < DATA_LENGTH * SEG_SIZE; cnt++)
 	{
 		data_to_be_sent[cnt] = (cnt % (256));
 	}
@@ -443,8 +443,8 @@ l2fwd_main_p(void)
 			// data_to_be_sent[indx_seg * DATA_LENGTH] = 0xFF;
 			// package(data_to_be_sent + DATA_LENGTH * indx_seg, DATA_LENGTH, m);
 
-			data_to_be_sent[0] = pcnt;
-			package(data_to_be_sent, DATA_LENGTH, m);
+			data_to_be_sent[indx_seg * DATA_LENGTH] = pcnt;
+			package(data_to_be_sent + indx_seg * DATA_LENGTH, DATA_LENGTH, m);
 			//	printf("total_length=  %d\n",total_length);
 
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))

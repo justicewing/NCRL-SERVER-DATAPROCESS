@@ -591,7 +591,7 @@ signal_handler(int signum)
 
 int main(int argc, char **argv)
 {
-	feedbackable = 1;
+	feedbackable = 0;
 	int ret;
 	uint8_t nb_ports;
 	uint8_t portid;

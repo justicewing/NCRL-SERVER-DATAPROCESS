@@ -51,15 +51,16 @@ static volatile bool force_quit;
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
-#define NB_MBUF 8192
+#define NB_MBUF 1024
 #define DATA_LENGTH 1024
 #define SEG_SIZE 1726
+#define MBUF_SIZE (DATA_LENGTH * SEG_SIZE)
 
 uint8_t *data_to_be_sent;
 
 #define MAX_PKT_BURST 32
 #define BURST_TX_DRAIN_US 4 /* TX drain every ~100us */
-#define MEMPOOL_CACHE_SIZE 256
+#define MEMPOOL_CACHE_SIZE 64
 
 /*
  * Configurable number of RX/TX ring descriptors
@@ -401,7 +402,7 @@ l2fwd_main_p(void)
 		else
 		{
 			data_to_be_sent[indx_seg * DATA_LENGTH] = pcnt;
-			package(data_to_be_sent + DATA_LENGTH * indx_seg, DATA_LENGTH, m);
+			package(data_to_be_sent, DATA_LENGTH * SEG_SIZE, m);
 			//	printf("total_length=  %d\n",total_length);
 
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
@@ -566,7 +567,7 @@ int main(int argc, char **argv)
 
 	/* create the mbuf pool */
 	l2fwd_pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool", NB_MBUF,
-												 MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
+												 MEMPOOL_CACHE_SIZE, 0, MBUF_SIZE,
 												 rte_socket_id());
 	printf("RTE_MBUF_DEFAULT_BUF_SIZE:%d\n", RTE_MBUF_DEFAULT_BUF_SIZE);
 	if (l2fwd_pktmbuf_pool == NULL)

@@ -14,7 +14,6 @@
 #include "thread_pool.h"
 #include "srslte/fec/cbsegm.h"
 #include "TaskScheduler.h"
-// #include "Tx_buff.h"
 #include "config.h"
 
 const int threadNum_tx = 1; // 发送端线程数
