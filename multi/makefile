@@ -3,7 +3,7 @@ DEST = main
 LIBS = -lm -lpthread -lmkl_rt -msse4.1 -fopenmp
 
 CPPFLAGS = -g -Wall -I . -msse4.1 -O3 -mavx
-main: ${OBJS}
-	gcc -o ${DEST} ${OBJS} ${LIBS}
+main: $(OBJS)
+	gcc -o $(DEST) $(OBJS) $(LIBS)
 clean:
-	rm -f ${DEST} ${OBJS}
+	rm -f $(DEST) $(OBJS)
