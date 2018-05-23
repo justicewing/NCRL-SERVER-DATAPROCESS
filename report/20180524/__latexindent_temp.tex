@@ -76,30 +76,65 @@
 \end{figure}
 \lstset{language=C++}
 \begin{lstlisting}
-/**
-* @param name
-*   The name of the mbuf pool.
-* @param n
-*   The number of elements in the mbuf pool. The optimum size (in terms
-*   of memory usage) for a mempool is when n is a power of two minus one:
-*   n = (2^q - 1).
-* @param cache_size
-*   Size of the per-core object cache. See rte_mempool_create() for
-*   details.
-* @param priv_size
-*   Size of application private are between the rte_mbuf structure
-*   and the data buffer. This value must be aligned to RTE_MBUF_PRIV_ALIGN.
-* @param data_room_size
-*   Size of data buffer in each mbuf, including RTE_PKTMBUF_HEADROOM.
-* @param socket_id
-*   The socket identifier where the memory should be allocated. The
-*   value can be *SOCKET_ID_ANY* if there is no NUMA constraint for the
-*   reserved zone.
-*/
-struct rte_mempool *
-rte_pktmbuf_pool_create(const char *name, unsigned n,
-	unsigned cache_size, uint16_t priv_size, uint16_t data_room_size,
-	int socket_id);
+const int threadNum_tx = 1;		// 发送端线程数
+const int threadNum_rx = 1;		// 接收端线程数
+
+/* 声明互斥锁 */
+pthread_mutex_t mutex1_tx;		// crc_cbsegm中的互斥锁
+pthread_mutex_t mutex2_tx;		// crc_mod中的互斥锁
+pthread_mutex_t mutex1_rx;		// chest_calsym中的互斥锁
+pthread_mutex_t mutex2_rx;		// derm_crc中的互斥锁
+pthread_mutex_t mutex3_rx;		// crc_check中的互斥锁
+
+/* 声明信号量 */
+sem_t exit_signal;			// 收发端主线程完成数信号量
+//test
+sem_t tx_signal;			// 开启发送端主线程的信号量
+sem_t rx_signal;			// 开启接收端主线程的信号量
+
+int main(){
+	
+	/* 初始化互斥锁 */
+	pthread_mutex_init(&mutex1_tx,NULL);
+	pthread_mutex_init(&mutex2_tx,NULL);
+	pthread_mutex_init(&mutex1_rx,NULL);
+	pthread_mutex_init(&mutex2_rx,NULL);
+	pthread_mutex_init(&mutex3_rx,NULL);
+	
+	/* 初始化信号量 */
+	sem_init(&exit_signal,0,0);
+	sem_init(&tx_signal,0,0);
+	sem_init(&rx_signal,0,0);
+	
+	/* 初始化线程池 */
+	pool_init(0, 1, 0);				// 发送端主线程池
+	printf("creat pool 0...\n");
+	pool_init(1, 1, 1);				// 接收端主线程池
+	printf("creat pool 1...\n");
+	pool_init(2, threadNum_tx, 2);			// 发送端任务线程池
+	printf("creat pool 2...\n");
+	pool_init(2 + threadNum_tx, threadNum_rx, 3);	// 接收端任务线程池
+	printf("creat pool 3...\n");
+	
+	/* 添加发送端主任务 */
+	pool_add_task(TaskScheduler_tx, NULL, 0);
+	printf("add tx taskScheduler to pool 0...\n");
+	/* 添加接收端主任务 */
+	pool_add_task(TaskScheduler_rx, NULL, 1);
+	printf("add rx taskScheduler to pool 1...\n");
+
+	/* 等待收发机主任务完成 */
+	for(int i = 0; i < 2; i++) sem_wait(&exit_signal);
+
+	/* 销毁线程池 */
+	pool_destroy(0);
+	pool_destroy(1);
+
+	/* 销毁信号量*/
+	sem_destroy(&exit_signal);
+
+	return 0;
+}
 \end{lstlisting}
 \begin{figure}[H]
 	\centering
