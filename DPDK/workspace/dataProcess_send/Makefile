@@ -44,10 +44,11 @@ include $(RTE_SDK)/mk/rte.vars.mk
 APP = dataProcess
 
 # all source are stored in SRCS-y
-SRCS-y := main.c thread_pool.c
+SRCS-y := main.c crc.c bit.c cbsegm.c debug.c turbocoder.c vector.c tc_interl_umts.c tc_interl_lte.c rm_turbo.c MQAMMod.c phy_common.c sequence.c turbodecoder.c turbodecoder_gen.c turbodecoder_sse.c QAM_NDemod.c CalPilotSymb.c CalSymb_mmse.c ChannelEstimator.c RxAdptLink.c ChannelEstimator_LS.c R_Estimator.c vector_simd.c crc_cbsegm.c crc_mod.c packing.c chest_calsym.c derm_crc.c crc_check.c TaskScheduler.c thread_pool.c 
 
-LIB += -lm -lpthread -lmkl_rt -msse4.1 -fopenmp
-CFLAGS += -g -Wall -I . -msse4.1 -O3 -mavx
+LIBS += -lm -lpthread -lmkl_rt -msse4.1 -fopenmp
+
+CFLAGS += -g -Wall -I . -msse4.1 -O3 -mavx 
 
 CFLAGS += -I$(SRCDIR)
 CFLAGS += -O3 $(USER_FLAGS)

@@ -380,11 +380,11 @@ l2fwd_main_loop_send(void)
 				{
 					/* do this only on master core */
 					running_second += 1;
-					print_stats();
-					printf("%d\n", running_second);
+					// print_stats();
+					// printf("%d\n", running_second);
 					send_rate = (port_statistics[portid].tx * mac_length_send * 8 / running_second) / 1000000000.0;
 					receive_rate = (port_statistics[portid].rx * mac_length_receive * 8 / running_second) / 1000000000.0;
-					printf("send_rate= %f Gb\nreceive_rate= %f Gb\n", send_rate, receive_rate);
+					// printf("send_rate= %f Gb\nreceive_rate= %f Gb\n", send_rate, receive_rate);
 					// printf("pack_err= %d\n", pack_err);
 					/* reset the timer */
 					timer_tsc = 0;
@@ -800,6 +800,19 @@ int main(int argc, char **argv)
 	pool_init(3 + threadNum_tx + threadNum_rx, 1, 5);
 	printf("creat pool 4...\n");
 
+	/* 添加发送端主任务 */
+	pool_add_task(TaskScheduler_tx, NULL, 0);
+	printf("add Tx TaskScheduler to pool 0...\n");
+	/* 添加接收端主任务 */
+	pool_add_task(TaskScheduler_rx, NULL, 1);
+	printf("add Rx TaskScheduler to pool 1...\n");
+	/* 添加发送端缓存任务 */
+	pool_add_task(Tx_buff, NULL, 4);
+	printf("add Tx Buff to pool 4...\n");
+	/* 添加发送端缓存任务 */
+	pool_add_task(Rx_buff, NULL, 5);
+	printf("add Rx Buff to pool 5...\n");
+
 	ret = 0;
 	/* launch tasks on lcore */
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_c, NULL, 1);
@@ -819,6 +832,29 @@ int main(int argc, char **argv)
 	}
 
 	portid = 0;
+
+	/* 等待信号销毁线程 */
+	sem_wait(&tx_can_be_destroyed);
+	pool_destroy(0);
+	sem_wait(&rx_can_be_destroyed);
+	pool_destroy(1);
+	sem_wait(&tx_buff_can_be_destroyed);
+	pool_destroy(4);
+	sem_wait(&rx_buff_can_be_destroyed);
+	pool_destroy(5);
+
+	/* 销毁信号量*/
+	sem_destroy(&tx_can_be_destroyed);
+	sem_destroy(&rx_can_be_destroyed);
+	sem_destroy(&tx_buff_can_be_destroyed);
+	sem_destroy(&rx_buff_can_be_destroyed);
+	sem_destroy(&tx_prepared);
+	sem_destroy(&rx_prepared);
+	sem_destroy(&tx_buff_prepared);
+	sem_destroy(&rx_buff_prepared);
+	sem_destroy(&cache_tx);
+	sem_destroy(&cache_rx);
+	sem_destroy(&buffisnotEmpty);
 
 	printf("Closing port %d...", portid);
 	rte_eth_dev_stop(portid);
