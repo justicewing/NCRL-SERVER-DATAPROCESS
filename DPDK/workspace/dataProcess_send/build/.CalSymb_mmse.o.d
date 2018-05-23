@@ -1,21 +1,20 @@
 dep_CalSymb_mmse.o = \
  /home/sherlockhsu/Github/DataProcess-Server-/DPDK/workspace/dataProcess_send/CalSymb_mmse.c \
  /usr/include/stdc-predef.h \
- /home/sherlockhsu/dpdk/x86_64-native-linuxapp-gcc/include/rte_config.h \
+ /home/sherlockhsu/dpdk/x86_64-native-linuxapp-icc/include/rte_config.h \
  /usr/include/stdio.h /usr/include/features.h \
  /usr/include/x86_64-linux-gnu/sys/cdefs.h \
  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
  /usr/include/x86_64-linux-gnu/gnu/stubs.h \
  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
- /usr/lib/gcc/x86_64-linux-gnu/5/include/stddef.h \
+ /opt/intel/compilers_and_libraries_2018.2.199/linux/compiler/include/stddef.h \
  /usr/include/x86_64-linux-gnu/bits/types.h \
  /usr/include/x86_64-linux-gnu/bits/typesizes.h /usr/include/libio.h \
  /usr/include/_G_config.h /usr/include/wchar.h \
- /usr/lib/gcc/x86_64-linux-gnu/5/include/stdarg.h \
+ /opt/intel/compilers_and_libraries_2018.2.199/linux/compiler/include/stdarg.h \
  /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
  /usr/include/x86_64-linux-gnu/bits/sys_errlist.h \
- /usr/include/x86_64-linux-gnu/bits/stdio.h \
- /usr/include/x86_64-linux-gnu/bits/stdio2.h /usr/include/stdlib.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio.h /usr/include/stdlib.h \
  /usr/include/x86_64-linux-gnu/bits/waitflags.h \
  /usr/include/x86_64-linux-gnu/bits/waitstatus.h /usr/include/endian.h \
  /usr/include/x86_64-linux-gnu/bits/endian.h \
@@ -26,12 +25,10 @@ dep_CalSymb_mmse.o = \
  /usr/include/x86_64-linux-gnu/bits/select.h \
  /usr/include/x86_64-linux-gnu/bits/sigset.h \
  /usr/include/x86_64-linux-gnu/bits/time.h \
- /usr/include/x86_64-linux-gnu/bits/select2.h \
  /usr/include/x86_64-linux-gnu/sys/sysmacros.h \
  /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h /usr/include/alloca.h \
  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
  /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
- /usr/include/x86_64-linux-gnu/bits/stdlib.h \
  /opt/intel/compilers_and_libraries_2018.2.199/linux/mkl/include/mkl.h \
  /opt/intel/compilers_and_libraries_2018.2.199/linux/mkl/include/mkl_version.h \
  /opt/intel/compilers_and_libraries_2018.2.199/linux/mkl/include/mkl_types.h \
