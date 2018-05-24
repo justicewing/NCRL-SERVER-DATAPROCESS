@@ -94,7 +94,8 @@ int sendable;
 #define SENDABLE_FLAG 0xFF
 #define ONE_SEND_NUM 1
 
-static volatile bool force_quit;
+// static volatile bool force_quit;	// 不能在其他编译单元内使用
+volatile bool force_quit;
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 

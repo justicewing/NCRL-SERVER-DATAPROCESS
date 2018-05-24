@@ -58,6 +58,8 @@ pthread_mutex_t mutex_readyNum_rx;
 int runIndex = 0;
 int buffisEmpty;
 
+extern bool force_quit;
+
 const int CQI_mod[16] = {0, 2, 2, 2, 2, 2, 2, 4, 4, 4, 6, 6, 6, 6, 6, 6};
 const int CQI_cod[16] = {0, 78, 120, 193, 308, 449, 602, 378, 490, 616, 466, 567, 666, 772, 873, 948};
 const float CQI_mapping_table_LS[15] = {3, 4, 5, 7, 8, 9, 13, 14, 16, 17, 19, 20, 22, 24, 27};
@@ -371,7 +373,7 @@ void TaskScheduler_tx(void *arg)
 	if (TIME_EN == 1)
 		gettimeofday(&tx_begin, NULL); //--------------------rx
 
-	while (1)
+	while (!force_quit)
 	{
 		//sleep(1);
 		//if(runIndex >= 3000) break;
@@ -883,7 +885,7 @@ void TaskScheduler_rx(void *arg)
 		gettimeofday(&rx_begin, NULL); //--------------------rx
 	sem_wait(&cache_rx);
 	static int cnt = 0;
-	while (1)
+	while (!force_quit)
 	{
 
 		//sleep(1);
@@ -1235,7 +1237,7 @@ void Tx_buff(void *arg)
 	sem_post(&tx_buff_prepared);
 	sem_wait(&tx_prepared);
 	// printf("tx buff start\n");
-	while (1)
+	while (!force_quit)
 	{
 		// printf("aaaaaa……\n");
 		if (readyNum_tx == 0)
@@ -1363,7 +1365,7 @@ void Rx_buff(void *arg)
 	sem_post(&rx_buff_prepared);
 	sem_wait(&rx_prepared);
 	// printf("rx buff start\n");
-	while (1)
+	while (!force_quit)
 	{
 		if (buffisEmpty)
 			sem_wait(&buffisnotEmpty);

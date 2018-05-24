@@ -1,0 +1,7 @@
+cd dpdk/usertools/
+modprobe uio_pci_generic
+./dpdk-devbind.py -b uio_pci_generic 0000:45:00.0
+./dpdk-devbind.py -b uio_pci_generic 0000:45:00.1
+./dpdk-devbind.py -b uio_pci_generic 0000:82:00.0
+./dpdk-devbind.py -b uio_pci_generic 0000:82:00.1
+mount -t hugetlbfs nodev /mnt/huge

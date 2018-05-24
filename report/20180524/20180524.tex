@@ -22,7 +22,7 @@
 	\geometry{left=1cm,right=1cm,top=1cm,bottom=2cm}
 	\onehalfspacing
 	\setlength\parindent{0em}
-	
+
 	%=========代码格式设置============================
 	\definecolor{dkgreen}{rgb}{0,0.6,0}
 	\definecolor{gray}{rgb}{0.5,0.5,0.5}
@@ -71,31 +71,16 @@
 \section{尝试扩大DPDK的中mbuf}
 \begin{figure}[H]
 	\centering
+	\includegraphics[width = \textwidth]{frame_sys_old.pdf}
+	\caption{原系统结构}
+\end{figure}
+\begin{figure}[H]
+	\centering
 	\includegraphics[width = .8\textwidth]{structure_mbuf.jpg}
 	\caption{rtl\_mbuf结构}
 \end{figure}
 \lstset{language=C++}
 \begin{lstlisting}
-/**
-* @param name
-*   The name of the mbuf pool.
-* @param n
-*   The number of elements in the mbuf pool. The optimum size (in terms
-*   of memory usage) for a mempool is when n is a power of two minus one:
-*   n = (2^q - 1).
-* @param cache_size
-*   Size of the per-core object cache. See rte_mempool_create() for
-*   details.
-* @param priv_size
-*   Size of application private are between the rte_mbuf structure
-*   and the data buffer. This value must be aligned to RTE_MBUF_PRIV_ALIGN.
-* @param data_room_size
-*   Size of data buffer in each mbuf, including RTE_PKTMBUF_HEADROOM.
-* @param socket_id
-*   The socket identifier where the memory should be allocated. The
-*   value can be *SOCKET_ID_ANY* if there is no NUMA constraint for the
-*   reserved zone.
-*/
 struct rte_mempool *
 rte_pktmbuf_pool_create(const char *name, unsigned n,
 	unsigned cache_size, uint16_t priv_size, uint16_t data_room_size,
