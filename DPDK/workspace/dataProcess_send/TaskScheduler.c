@@ -92,7 +92,7 @@ void TaskScheduler_tx(void *arg)
 		}
 	}
 	int inter_freq = LayerNum;
-	while (CARRIER_NUM / SBNum % inter_freq != 0)
+	while (CARRIER_NUM / SBNum % inter_freq != 0 && !force_quit)
 		inter_freq++;
 
 	float SNR_MIN = 15, SNR_MAX = 15, STEP = 1.0;
@@ -235,7 +235,7 @@ void TaskScheduler_tx(void *arg)
 	fp_hr = fopen("channel/H_real2.txt", "r");
 	if (!fp_hr)
 		printf("Can not open the file.\n");
-	while (!feof(fp_hr))
+	while (!feof(fp_hr) && !force_quit)
 	{
 		fscanf(fp_hr, "%f", &(channel[m].real));
 		//if(m < 10) printf("%d %e\n",m,channel[m].real);
@@ -249,7 +249,7 @@ void TaskScheduler_tx(void *arg)
 	m = 0;
 	if (!fp_hi)
 		printf("Can not open the file.\n");
-	while (!feof(fp_hi))
+	while (!feof(fp_hi) && !force_quit)
 	{
 		fscanf(fp_hi, "%f", &(channel[m].imag));
 		//if(m < 10) printf("%d %e\n",m,channel[m].imag);
@@ -287,13 +287,13 @@ void TaskScheduler_tx(void *arg)
 	fp_ni = fopen("channel/wgni.txt", "r");
 	lapack_complex_float *gwn = (lapack_complex_float *)malloc(sizeof(lapack_complex_float) * RX_ANT_NUM * CARRIER_NUM * SYMBOL_NUM);
 	m = 0;
-	while (!feof(fp_nr))
+	while (!feof(fp_nr) && !force_quit)
 	{
 		fscanf(fp_nr, "%f", &(gwn[m].real));
 		m++;
 	}
 	m = 0;
-	while (!feof(fp_ni))
+	while (!feof(fp_ni) && !force_quit)
 	{
 		fscanf(fp_ni, "%f", &(gwn[m].imag));
 		m++;
@@ -357,7 +357,6 @@ void TaskScheduler_tx(void *arg)
 	printf("TaskScheduler tx prepared...\n");
 	sem_post(&tx_prepared);
 	sem_post(&tx_prepared);
-	sem_wait(&rx_prepared);
 	sem_wait(&tx_buff_prepared);
 	//--------------------Data processing--------------------
 	ServiceEN_tx = (int *)malloc(sizeof(int) * PARA_NUM_TX * TASK_NUM_TX);
@@ -703,7 +702,7 @@ void TaskScheduler_rx(void *arg)
 	}
 	int LayerNum = LAYER_NUM;
 	int inter_freq = LayerNum;
-	while (CARRIER_NUM / SBNum % inter_freq != 0)
+	while (CARRIER_NUM / SBNum % inter_freq != 0 && !force_quit)
 		inter_freq++;
 	struct chest_calsym_args_t *chest_calsym_args = (struct chest_calsym_args_t *)malloc(sizeof(struct chest_calsym_args_t) * SBNum * PARA_NUM_RX);
 	lapack_complex_float *y[PARA_NUM_RX][SBNum];
@@ -876,8 +875,6 @@ void TaskScheduler_rx(void *arg)
 		ServiceEN_rx[TASK_NUM_RX * i] = LayerNum;
 
 	sem_post(&rx_prepared);
-	sem_post(&rx_prepared);
-	sem_wait(&tx_prepared);
 	sem_wait(&rx_buff_prepared);
 
 	// omp_set_num_threads(1);
@@ -1207,8 +1204,8 @@ void TaskScheduler_rx(void *arg)
 /************************************************Tx_buff************************************************/
 /*******************************************************************************************************/
 
-uint8_t *mbuf;
-// extern uint8_t *mbuf;
+uint8_t *databuff;
+// extern uint8_t *databuff;
 
 // int index_tx_read;
 // extern int readyNum_tx;
@@ -1231,7 +1228,7 @@ void Tx_buff(void *arg)
 	// printf("tx buff start\n");
 	index_tx_read = 0;
 	buffisEmpty = 1;
-	mbuf = (unsigned char *)malloc(MAX_MBUFF);
+	databuff = (unsigned char *)malloc(DATABUFF_SZIE);
 	pthread_mutex_init(&mutex_buffisEmpty, NULL);
 	printf("Tx Buff prepared...\n");
 	sem_post(&tx_buff_prepared);
@@ -1245,7 +1242,7 @@ void Tx_buff(void *arg)
 		if (readyNum_tx > 0 && buffisEmpty)
 		{
 			// printf("\ntx buff circle start:%d\n", index_tx_read);
-			package_to_buff(&package_tx[index_tx_read], mbuf);
+			package_to_buff(&package_tx[index_tx_read], databuff);
 			// printf("\ntx buff down:%d\n", index_tx_read);
 			index_tx_read++;
 			if (index_tx_read >= PACK_CACHE)
@@ -1264,6 +1261,7 @@ void Tx_buff(void *arg)
 			// printf("tx buff circle end\n");
 		}
 	}
+	sem_post(&buffisnotEmpty);
 	pthread_mutex_destroy(&mutex_buffisEmpty);
 	sem_post(&tx_buff_can_be_destroyed);
 }
@@ -1377,7 +1375,7 @@ void Rx_buff(void *arg)
 			// printf("\nrx buff circle start:%d\n", index_rx_write);
 			// printf("startNum_rx = %d\n", startNum_rx);
 			// printf("readyNum_rx = %d\n", readyNum_rx);
-			buff_to_package(&package_rx[index_rx_write], mbuf);
+			buff_to_package(&package_rx[index_rx_write], databuff);
 			// printf("\nrx buff down:%d\n", index_rx_write);
 			index_rx_write++;
 			if (index_rx_write >= PACK_CACHE)
@@ -1391,6 +1389,7 @@ void Rx_buff(void *arg)
 			pthread_mutex_unlock(&mutex_buffisEmpty);
 		}
 	}
+	sem_post(&cache_rx);
 	sem_post(&rx_can_be_destroyed);
 }
 
