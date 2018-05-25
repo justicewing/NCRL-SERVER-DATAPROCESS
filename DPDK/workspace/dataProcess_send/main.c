@@ -96,7 +96,7 @@ extern int buffisEmpty;
 int sendable;
 
 #define SENDABLE_FLAG 0xFF
-#define ONE_SEND_NUM 1
+#define ONE_SEND_NUM 4
 
 // static volatile bool force_quit;	// 不能在其他编译单元内使用
 volatile bool force_quit;
@@ -107,7 +107,7 @@ volatile bool force_quit;
 #define MBUFF_DATA_LENGTH 1024
 #define SEG_SIZE 1726
 
-uint8_t *data_to_be_sent;
+// uint8_t *data_to_be_sent;
 
 #define MAX_PKT_BURST 32
 #define BURST_TX_DRAIN_US 4 /* TX drain every ~100us */
@@ -246,31 +246,6 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 	for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
 		*adcnt = 0x00;
 
-	// *adcnt = 0xA0;
-	// adcnt++;
-	// *adcnt = 0x36;
-	// adcnt++;
-	// *adcnt = 0x7A;
-	// adcnt++;
-	// *adcnt = 0x58;
-	// adcnt++;
-	// *adcnt = 0xAD;
-	// adcnt++;
-	// *adcnt = 0x76;
-	// adcnt++;
-
-	// *adcnt = 0xA0;
-	// adcnt++;
-	// *adcnt = 0x36;
-	// adcnt++;
-	// *adcnt = 0x9F;
-	// adcnt++;
-	// *adcnt = 0x58;
-	// adcnt++;
-	// *adcnt = 0xA6;
-	// adcnt++;
-	// *adcnt = 0x76;
-	// adcnt++;
 	for (int i = 0; i < 16; i++)
 	{
 		*adcnt = 0xFF;
@@ -286,24 +261,6 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 	// for (adcnt = rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt < (uint8_t *)m->buf_addr + m->buf_len; adcnt++)
 	// 	*adcnt = 0x00;
 
-	return 0;
-}
-
-int read_from_txt(char *a, int num) //从文件中将数据读入全局数组b[]中，返回0读取成功，返回1文件不存在
-{
-	FILE *fp = NULL;
-	int i = 0;
-	fp = fopen(a, "r");
-	if (fp == NULL)
-	{
-		printf("此文件不存在");
-		return 1;
-	}
-	for (i = 0; i < num; i++)
-		fscanf(fp, "%x  ", &data_to_be_sent[i]);
-	for (i = 0; i < num; i++)
-		printf("%d   %x\n", i, data_to_be_sent[i]);
-	fclose(fp);
 	return 0;
 }
 
@@ -465,12 +422,12 @@ l2fwd_main_p(void)
 	// 	data_to_be_sent[cnt * 2 + 1] = (cnt % (256 * 256));
 	// }
 
-	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * MBUFF_DATA_LENGTH);
+	// data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * MBUFF_DATA_LENGTH);
 
-	for (cnt = 0; cnt < MBUFF_DATA_LENGTH; cnt++)
-	{
-		data_to_be_sent[cnt] = (cnt % (256));
-	}
+	// for (cnt = 0; cnt < MBUFF_DATA_LENGTH; cnt++)
+	// {
+	// 	data_to_be_sent[cnt] = (cnt % (256));
+	// }
 	// data_to_be_sent[0] = 0xFF;
 
 	struct rte_mbuf *m;

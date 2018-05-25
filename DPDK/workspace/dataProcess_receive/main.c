@@ -40,6 +40,35 @@
 #include <rte_ethdev.h>
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
+#include "mkl.h"
+#include "thread_pool.h"
+#include "srslte/fec/cbsegm.h"
+#include "TaskScheduler.h"
+#include "config.h"
+
+const int threadNum_tx = 1; // 发送端线程数
+const int threadNum_rx = 1; // 接收端线程数
+
+/* 声明互斥锁 */
+pthread_mutex_t mutex1_tx;
+pthread_mutex_t mutex2_tx;
+pthread_mutex_t mutex1_rx;
+pthread_mutex_t mutex2_rx;
+pthread_mutex_t mutex3_rx;
+
+/* 声明信号量 */
+sem_t tx_can_be_destroyed;
+sem_t rx_can_be_destroyed;
+sem_t tx_buff_can_be_destroyed;
+sem_t rx_buff_can_be_destroyed;
+sem_t tx_prepared;
+sem_t rx_prepared;
+sem_t tx_buff_prepared;
+sem_t rx_buff_prepared;
+sem_t cache_tx;
+sem_t cache_rx;
+sem_t sem_buffisnotEmpty;
+sem_t sem_buffisEmpty;
 
 /* 声明信号量 */
 sem_t lcore_send_prepared;
@@ -48,17 +77,21 @@ sem_t lcore_p_prepared;
 sem_t lcore_c_prepared;
 sem_t feedback_sem;
 
+extern uint8_t *databuff;
+extern pthread_mutex_t mutex_buffisEmpty;
+extern int buffisEmpty;
+
 int feedbackable;
 
 #define SENDABLE_FLAG 0xFF
-#define ONE_SEND_NUM 1
+#define ONE_SEND_NUM 4
 
-static volatile bool force_quit;
+volatile bool force_quit;
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
 #define NB_MBUF 8192
-#define DATA_LENGTH 1024
+#define MBUFF_DATA_LENGTH 1024
 #define SEG_SIZE 1726
 
 uint8_t *data_to_be_sent;
@@ -195,36 +228,16 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 {
 	uint8_t *adcnt = NULL;
 	int cnt = 0;
-	rte_pktmbuf_append(m, length);
 
-	// *adcnt = 0xA0;
-	// adcnt++;
-	// *adcnt = 0x36;
-	// adcnt++;
-	// *adcnt = 0x9F;
-	// adcnt++;
-	// *adcnt = 0x58;
-	// adcnt++;
-	// *adcnt = 0xA6;
-	// adcnt++;
-	// *adcnt = 0x76;
-	// adcnt++;
-
-	// *adcnt = 0xA0;
-	// adcnt++;
-	// *adcnt = 0x36;
-	// adcnt++;
-	// *adcnt = 0x7A;
-	// adcnt++;
-	// *adcnt = 0x58;
-	// adcnt++;
-	// *adcnt = 0xAD;
-	// adcnt++;
-	// *adcnt = 0x76;
-	// adcnt++;
-
+	rte_pktmbuf_append(m, length + 16);
 	for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
 		*adcnt = 0x00;
+
+	for (int i = 0; i < 16; i++)
+	{
+		*adcnt = 0xFF;
+		adcnt++;
+	}
 
 	for (cnt = 0; cnt < length; cnt++)
 	{
@@ -232,26 +245,23 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 		adcnt++;
 	}
 
+	// for (adcnt = rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt < (uint8_t *)m->buf_addr + m->buf_len; adcnt++)
+	// 	*adcnt = 0x00;
+
 	return 0;
 }
 
-// int read_from_txt(char *a, int num) //从文件中将数据读入全局数组b[]中，返回0读取成功，返回1文件不存在
-// {
-// 	FILE *fp = NULL;
-// 	int i = 0;
-// 	fp = fopen(a, "r");
-// 	if (fp == NULL)
-// 	{
-// 		printf("此文件不存在");
-// 		return 1;
-// 	}
-// 	for (i = 0; i < num; i++)
-// 		fscanf(fp, "%x  ", &data_to_be_sent[i]);
-// 	for (i = 0; i < num; i++)
-// 		printf("%d   %x\n", i, data_to_be_sent[i]);
-// 	fclose(fp);
-// 	return 0;
-// }
+int depackage(unsigned char *data, int length, uint8_t *adcnt)
+{
+	int cnt = 0;
+	adcnt += 16;
+	for (cnt = 0; cnt < length; cnt++)
+	{
+		data[cnt] = *adcnt;
+		adcnt++;
+	}
+	return 0;
+}
 
 static int
 l2fwd_main_loop_send(void)
@@ -278,8 +288,8 @@ l2fwd_main_loop_send(void)
 
 	double receive_rate = 0;
 	double send_rate = 0;
-	int mac_length_send = DATA_LENGTH;
-	int mac_length_receive = DATA_LENGTH;
+	int mac_length_send = MBUFF_DATA_LENGTH;
+	int mac_length_receive = MBUFF_DATA_LENGTH;
 
 	RTE_LOG(INFO, L2FWD, "entering main loop send on lcore %u\n", lcore_id);
 
@@ -404,7 +414,7 @@ l2fwd_main_p(void)
 	int indx_seg = 0;
 
 	// int total_length = 0;
-	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * DATA_LENGTH);
+	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * MBUFF_DATA_LENGTH);
 	data_to_be_sent[0] = SENDABLE_FLAG;
 
 	// for (cnt = 0; cnt < SEG_SIZE * DATA_LENGTH / 2; cnt++)
@@ -440,7 +450,7 @@ l2fwd_main_p(void)
 				printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 				continue;
 			}
-			package(data_to_be_sent, DATA_LENGTH, m);
+			package(data_to_be_sent, MBUFF_DATA_LENGTH, m);
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
 				; //printf("p!\n");
 
@@ -465,30 +475,49 @@ l2fwd_main_c(void)
 	lcore_id = rte_lcore_id();
 	RTE_LOG(INFO, L2FWD, "entering main loop consume on core %u\n", lcore_id);
 	int feedback_cnt = 0;
+	int indx_seg = 0;
+	buffisEmpty = 1;
 
 	sem_post(&lcore_c_prepared);
 	sem_wait(&lcore_receive_prepared);
+	sem_wait(&rx_prepared);
 
 	while (!force_quit)
 	{
-		if (rte_ring_mc_dequeue(ring_receive, e) < 0)
-			;
-		//printf("!\n");
-		else
+		if (!buffisEmpty)
+			sem_wait(&sem_buffisEmpty);
+		if (buffisEmpty)
 		{
-			adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
-			feedback_cnt++;
-			if (feedback_cnt == ONE_SEND_NUM)
+			if (feedback_cnt >= ONE_SEND_NUM)
 			{
 				feedbackable = 1;
 				sem_post(&feedback_sem);
 				feedback_cnt = 0;
 			}
-			rte_pktmbuf_free(*(struct rte_mbuf **)e);
+			if (rte_ring_mc_dequeue(ring_receive, e) < 0)
+				;
+			//printf("!\n");
+			else
+			{
+				adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
+				depackage(databuff + MBUFF_DATA_LENGTH * indx_seg, MBUFF_DATA_LENGTH, adcnt);
+				indx_seg++;
+				if (indx_seg >= SEG_SIZE)
+				{
+					indx_seg = 0;
+					pthread_mutex_lock(&mutex_buffisEmpty);
+					buffisEmpty = 0;
+					pthread_mutex_unlock(&mutex_buffisEmpty);
+					sem_post(&sem_buffisnotEmpty);
+				}
+				feedback_cnt++;
+				rte_pktmbuf_free(*(struct rte_mbuf **)e);
+			}
 		}
 	}
 	// 结束后叫醒
 	sem_post(&feedback_sem);
+	sem_post(&sem_buffisnotEmpty);
 }
 static int
 l2fwd_launch_one_lcore_send(__attribute__((unused)) void *dummy)
@@ -710,12 +739,68 @@ int main(int argc, char **argv)
 
 	check_all_ports_link_status(1, 0x1);
 
+	/* for TaskScheduler */
 	/* 初始化信号量 */
 	sem_init(&lcore_send_prepared, 0, 0);
 	sem_init(&lcore_receive_prepared, 0, 0);
 	sem_init(&lcore_p_prepared, 0, 0);
 	sem_init(&lcore_c_prepared, 0, 0);
 	sem_init(&feedback_sem, 0, 0);
+
+	/* 初始化互斥锁 */
+	pthread_mutex_init(&mutex1_tx, NULL);
+	pthread_mutex_init(&mutex2_tx, NULL);
+	pthread_mutex_init(&mutex1_rx, NULL);
+	pthread_mutex_init(&mutex2_rx, NULL);
+	pthread_mutex_init(&mutex3_rx, NULL);
+
+	/* 初始化信号量 */
+	sem_init(&tx_can_be_destroyed, 0, 0);
+	sem_init(&rx_can_be_destroyed, 0, 0);
+	sem_init(&tx_buff_can_be_destroyed, 0, 0);
+	sem_init(&rx_buff_can_be_destroyed, 0, 0);
+	sem_init(&tx_prepared, 0, 0);
+	sem_init(&rx_prepared, 0, 0);
+	sem_init(&tx_buff_prepared, 0, 0);
+	sem_init(&rx_buff_prepared, 0, 0);
+	sem_init(&cache_tx, 0, 0);
+	sem_init(&cache_rx, 0, 0);
+	sem_init(&sem_buffisnotEmpty, 0, 0);
+	sem_init(&sem_buffisEmpty, 0, 0);
+
+	/* 初始化线程池 */
+	// pool_init(0, 1, 0);
+	// printf("creat pool 0...\n");
+	// pool_init(1, 1, 1);
+	// printf("creat pool 1...\n");
+	// pool_init(2, threadNum_tx, 2);
+	// printf("creat pool 2...\n");
+	// pool_init(2 + threadNum_tx, threadNum_rx, 3);
+	// printf("creat pool 3...\n");
+	// pool_init(2 + threadNum_tx + threadNum_rx, 1, 4);
+	// printf("creat pool 4...\n");
+	// pool_init(3 + threadNum_tx + threadNum_rx, 1, 5);
+	// printf("creat pool 4...\n");
+
+	pool_init(0, 1, 1);
+	printf("creat pool 1...\n");
+	pool_init(1, threadNum_rx, 3);
+	printf("creat pool 3...\n");
+	pool_init(1 + threadNum_rx, 1, 5);
+	printf("creat pool 5...\n");
+
+	/* 添加发送端主任务 */
+	// pool_add_task(TaskScheduler_tx, NULL, 0);
+	// printf("add Tx TaskScheduler to pool 0...\n");
+	/* 添加接收端主任务 */
+	pool_add_task(TaskScheduler_rx, NULL, 1);
+	printf("add Rx TaskScheduler to pool 1...\n");
+	/* 添加发送端缓存任务 */
+	// pool_add_task(Tx_buff, NULL, 4);
+	// printf("add Tx Buff to pool 4...\n");
+	/* 添加发送端缓存任务 */
+	pool_add_task(Rx_buff, NULL, 5);
+	printf("add Rx Buff to pool 5...\n");
 
 	ret = 0;
 	/* launch tasks on lcore */
@@ -736,6 +821,30 @@ int main(int argc, char **argv)
 	}
 
 	portid = 0;
+
+	/* 等待信号销毁线程 */
+	// sem_wait(&tx_can_be_destroyed);
+	// pool_destroy(0);
+	sem_wait(&rx_can_be_destroyed);
+	pool_destroy(1);
+	// sem_wait(&tx_buff_can_be_destroyed);
+	// pool_destroy(4);
+	sem_wait(&rx_buff_can_be_destroyed);
+	pool_destroy(5);
+
+	/* 销毁信号量*/
+	// sem_destroy(&tx_can_be_destroyed);
+	sem_destroy(&rx_can_be_destroyed);
+	// sem_destroy(&tx_buff_can_be_destroyed);
+	sem_destroy(&rx_buff_can_be_destroyed);
+	// sem_destroy(&tx_prepared);
+	sem_destroy(&rx_prepared);
+	// sem_destroy(&tx_buff_prepared);
+	sem_destroy(&rx_buff_prepared);
+	// sem_destroy(&cache_tx);
+	sem_destroy(&cache_rx);
+	sem_destroy(&sem_buffisnotEmpty);
+	sem_destroy(&sem_buffisEmpty);
 
 	printf("Closing port %d...", portid);
 	rte_eth_dev_stop(portid);
