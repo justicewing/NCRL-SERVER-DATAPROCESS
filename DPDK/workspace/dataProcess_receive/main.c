@@ -229,7 +229,7 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 	for (cnt = 0; cnt < length; cnt++)
 	{
 		*adcnt = data[cnt];
-		*adcnt++;
+		adcnt++;
 	}
 
 	return 0;

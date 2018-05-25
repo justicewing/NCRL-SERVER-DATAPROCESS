@@ -242,7 +242,7 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 	uint8_t *adcnt = NULL;
 	int cnt = 0;
 
-	rte_pktmbuf_append(m, length);
+	rte_pktmbuf_append(m, length + 16);
 	for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
 		*adcnt = 0x00;
 
@@ -271,6 +271,11 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 	// adcnt++;
 	// *adcnt = 0x76;
 	// adcnt++;
+	for (int i = 0; i < 16; i++)
+	{
+		*adcnt = 0xFF;
+		adcnt++;
+	}
 
 	for (cnt = 0; cnt < length; cnt++)
 	{
