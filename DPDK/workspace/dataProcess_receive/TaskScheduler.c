@@ -874,6 +874,8 @@ void TaskScheduler_rx(void *arg)
 	for (int i = 0; i < PARA_NUM_RX; i++)
 		ServiceEN_rx[TASK_NUM_RX * i] = LayerNum;
 
+	FILE *fpr = fopen("result", "w");
+
 	sem_post(&rx_prepared);
 	sem_post(&rx_prepared);
 	sem_wait(&rx_buff_prepared);
@@ -899,10 +901,10 @@ void TaskScheduler_rx(void *arg)
 				// 	index_rx_read = index_tx_write;
 				// else
 				// 	index_rx_read = 0;
-				// printf("CNT:%d,tx_write:%d,tx_read:%d,rx_write:%d,rx_read:%d\n",
-				// 	   ++cnt, index_tx_write, index_tx_read, index_rx_write, index_rx_read);
-				// printf("\tstart_tx:%d,ready_tx:%d,start_rx:%d,ready_rx:%d,empty:%d\n",
-				// 	   startNum_tx, readyNum_tx, startNum_rx, readyNum_rx, buffisEmpty);
+				printf("CNT:%d,tx_write:%d,tx_read:%d,rx_write:%d,rx_read:%d\n",
+					   ++cnt, index_tx_write, index_tx_read, index_rx_write, index_rx_read);
+				printf("\tstart_tx:%d,ready_tx:%d,start_rx:%d,ready_rx:%d,empty:%d\n",
+					   startNum_tx, readyNum_tx, startNum_rx, readyNum_rx, buffisEmpty);
 				for (int i = 0; i < LayerNum; ++i)
 				{
 					srslte_cbsegm(cb_rx[n][i], package_rx[index_rx_read].tbs[i]);
@@ -1128,14 +1130,18 @@ void TaskScheduler_rx(void *arg)
 						if (count_ms == testError)
 						{
 							printf("\n--------------------No.%d~%d--------------------", runIndex + 2 - testError, runIndex + 1);
+							fprintf(fpr, "\n--------------------No.%d~%d--------------------", runIndex + 2 - testError, runIndex + 1);
 							count_ms = 0;
 							if (BLER_EN == 1)
 							{ //-------------Block error information
 								printf("\n--------------------Block Error statistics(SNR %5.2f)--------------------", test_rx[n].SNR);
 								printf("\nBlock error : %f(%d/%d)", BER->BLERNum * 1.0 / BER->BlocksNum, BER->BLERNum, BER->BlocksNum);
+								fprintf(fpr, "\n--------------------Block Error statistics(SNR %5.2f)--------------------", test_rx[n].SNR);
+								fprintf(fpr, "\nBlock error : %f(%d/%d)", BER->BLERNum * 1.0 / BER->BlocksNum, BER->BLERNum, BER->BlocksNum);
 								for (int i = 0; i < LayerNum; i++)
 								{
 									printf("\nLayer %d Block error : %f(%d/%d)", i, BER->BLERNum_L[i] * 1.0 / BER->BlocksNum_L[i], BER->BLERNum_L[i], BER->BlocksNum_L[i]);
+									fprintf(fpr, "\nLayer %d Block error : %f(%d/%d)", i, BER->BLERNum_L[i] * 1.0 / BER->BlocksNum_L[i], BER->BLERNum_L[i], BER->BlocksNum_L[i]);
 								}
 
 								BER->BlocksNum = 0;
@@ -1150,9 +1156,12 @@ void TaskScheduler_rx(void *arg)
 							{ //--------------Bits error information
 								printf("\n--------------------Bits Error statistics(SNR %5.2f)--------------------", test_rx[n].SNR);
 								printf("\nBits error : %f(%d/%d)", BER->BERNum * 1.0 / BER->BitsNum, BER->BERNum, BER->BitsNum);
+								fprintf(fpr, "\n--------------------Bits Error statistics(SNR %5.2f)--------------------", test_rx[n].SNR);
+								fprintf(fpr, "\nBits error : %f(%d/%d)", BER->BERNum * 1.0 / BER->BitsNum, BER->BERNum, BER->BitsNum);
 								for (int i = 0; i < LayerNum; i++)
 								{
 									printf("\nLayer %d Bits error : %f(%d/%d)", i, BER->BERNum_L[i] * 1.0 / BER->BitsNum_L[i], BER->BERNum_L[i], BER->BitsNum_L[i]);
+									fprintf(fpr, "\nLayer %d Bits error : %f(%d/%d)", i, BER->BERNum_L[i] * 1.0 / BER->BitsNum_L[i], BER->BERNum_L[i], BER->BitsNum_L[i]);
 								}
 
 								BER->BitsNum = 0;
@@ -1178,6 +1187,10 @@ void TaskScheduler_rx(void *arg)
 							printf("Amount of information : %-8.4fMbit\n", bitsNum / 1024.0 / 1024);
 							printf("RX time               : %-8.4fs\n", runtime.rx);
 							printf("Throughput            : %-8.4fMbps\n", bitsNum / runtime.rx / 1024 / 1024);
+							fprintf(fpr, "\n--------------------RX : Time statistics--------------------\n");
+							fprintf(fpr, "Amount of information : %-8.4fMbit\n", bitsNum / 1024.0 / 1024);
+							fprintf(fpr, "RX time               : %-8.4fs\n", runtime.rx);
+							fprintf(fpr, "Throughput            : %-8.4fMbps\n", bitsNum / runtime.rx / 1024 / 1024);
 							runtime.rx = 0;
 							//gettimeofday(&rx_begin, NULL);//--------------------rx
 							bitsNum = 0;
@@ -1197,6 +1210,7 @@ void TaskScheduler_rx(void *arg)
 			}
 		}
 	}
+	fclose(fpr);
 	printf("Rx exit\n");
 	sem_post(&rx_can_be_destroyed);
 	freeQAMtable();
@@ -1344,7 +1358,7 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 /**************************************************************************/
 /*****************************Rx_buff**************************************/
 /**************************************************************************/
-extern sem_t rx_can_be_destroyed;
+extern sem_t rx_buff_can_be_destroyed;
 extern sem_t sem_buffisEmpty;
 // extern sem_t rx_buff_prepared;
 // pthread_mutex_t mutex_readyNum_rx;
@@ -1397,7 +1411,7 @@ void Rx_buff(void *arg)
 	sem_post(&cache_rx);
 	sem_post(&sem_buffisEmpty);
 	printf("Rx buff exit...\n");
-	sem_post(&rx_can_be_destroyed);
+	sem_post(&rx_buff_can_be_destroyed);
 }
 
 int buff_to_package(struct package_t *package, unsigned char *buff)

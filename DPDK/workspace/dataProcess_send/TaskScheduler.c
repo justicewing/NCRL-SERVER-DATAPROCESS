@@ -57,7 +57,7 @@ pthread_mutex_t mutex_readyNum_tx;
 pthread_mutex_t mutex_readyNum_rx;
 int runIndex = 0;
 int buffisEmpty;
-
+int data[MAX_MBUFF];
 extern bool force_quit;
 
 const int CQI_mod[16] = {0, 2, 2, 2, 2, 2, 2, 4, 4, 4, 6, 6, 6, 6, 6, 6};
@@ -1342,7 +1342,7 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 /**************************************************************************/
 /*****************************Rx_buff**************************************/
 /**************************************************************************/
-extern sem_t rx_can_be_destroyed;
+extern sem_t rx_buff_can_be_destroyed;
 // extern sem_t rx_buff_prepared;
 // pthread_mutex_t mutex_readyNum_rx;
 // int index_rx_write;
@@ -1390,7 +1390,7 @@ void Rx_buff(void *arg)
 		}
 	}
 	sem_post(&cache_rx);
-	sem_post(&rx_can_be_destroyed);
+	sem_post(&rx_buff_can_be_destroyed);
 }
 
 int buff_to_package(struct package_t *package, unsigned char *buff)

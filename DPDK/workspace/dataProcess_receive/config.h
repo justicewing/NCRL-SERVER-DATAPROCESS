@@ -39,7 +39,7 @@
 				   MAX_BEAM * CARRIER_NUM * SYMBOL_NUM * sizeof(lapack_complex_float) + \
 				   MAX_BEAM * (MAX_DATA_LEN_TX + CRC_LENGTH))
 
-#define DATABUFF_SZIE (1024 * 1726)
+#define DATABUFF_SZIE (1024 * 1792)
 
 #define PACK_CACHE 20 // 缓存
 #define SIZE_Y (MAX_BEAM * CARRIER_NUM * SYMBOL_NUM * sizeof(lapack_complex_float))

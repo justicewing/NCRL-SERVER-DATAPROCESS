@@ -84,7 +84,7 @@ extern int buffisEmpty;
 int feedbackable;
 
 #define SENDABLE_FLAG 0xFF
-#define ONE_SEND_NUM 4
+#define ONE_SEND_NUM 1
 
 volatile bool force_quit;
 
@@ -92,7 +92,7 @@ volatile bool force_quit;
 
 #define NB_MBUF 8192
 #define MBUFF_DATA_LENGTH 1024
-#define SEG_SIZE 1726
+#define SEG_SIZE 1792
 
 uint8_t *data_to_be_sent;
 
@@ -324,7 +324,7 @@ l2fwd_main_loop_send(void)
 					;
 				else
 				{
-					//print_mbuf_send(*(struct rte_mbuf **)e);
+					// print_mbuf_send(*(struct rte_mbuf **)e);
 					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
 					port_statistics[portid].tx += sent;
 					rte_pktmbuf_free(*(struct rte_mbuf **)e);
@@ -450,7 +450,7 @@ l2fwd_main_p(void)
 				printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 				continue;
 			}
-			package(data_to_be_sent, MBUFF_DATA_LENGTH, m);
+			package(data_to_be_sent, 16, m);
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
 				; //printf("p!\n");
 

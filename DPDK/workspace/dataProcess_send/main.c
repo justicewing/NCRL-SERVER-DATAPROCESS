@@ -96,7 +96,7 @@ extern int buffisEmpty;
 int sendable;
 
 #define SENDABLE_FLAG 0xFF
-#define ONE_SEND_NUM 4
+#define ONE_SEND_NUM 1
 
 // static volatile bool force_quit;	// 不能在其他编译单元内使用
 volatile bool force_quit;
@@ -105,7 +105,7 @@ volatile bool force_quit;
 
 #define NB_MBUF 8192
 #define MBUFF_DATA_LENGTH 1024
-#define SEG_SIZE 1726
+#define SEG_SIZE 1792
 
 // uint8_t *data_to_be_sent;
 
@@ -350,11 +350,7 @@ l2fwd_main_loop_send(void)
 					// print_stats();
 					// printf("%d\n", running_second);
 					send_rate = (port_statistics[portid].tx * mac_length_send * 8 / running_second) / 1000000000.0;
-					receive_rate = (port_statistics[portid].rx * mac_length_receive * 8 / running_second) / 1000000000.0;
-					// printf("send_rate= %f Gb\nreceive_rate= %f Gb\n", send_rate, receive_rate);
-					// printf("pack_err= %d\n", pack_err);
-					/* reset the timer */
-					timer_tsc = 0;
+					// printf("send_rate= %f Gb\nreceive_rate= %f Gb\n", send_rate, receive_rated					timer_tsc = 0;
 				}
 			}
 
@@ -387,7 +383,7 @@ l2fwd_main_loop_receive(void)
 		// {
 		for (j = 0; j < nb_rx; j++)
 		{
-			print_mbuf_receive(pkts_burst[j]);
+			// print_mbuf_receive(pkts_burst[j]);
 			rte_ring_mp_enqueue(ring_receive, pkts_burst[j]);
 			//rte_pktmbuf_free(pkts_burst[j]);
 			package_received++;
@@ -462,7 +458,7 @@ l2fwd_main_p(void)
 			packet_num_threw_in_ring++;
 			pcnt++;
 			indx_seg++;
-			if (indx_seg == SEG_SIZE)
+			if (indx_seg >= SEG_SIZE)
 			{
 				indx_seg = 0;
 				pthread_mutex_lock(&mutex_buffisEmpty);
@@ -471,7 +467,7 @@ l2fwd_main_p(void)
 			}
 
 			sendable_cnt++;
-			if (sendable_cnt == ONE_SEND_NUM)
+			if (sendable_cnt >= ONE_SEND_NUM)
 			{
 				sendable = 0;
 				sendable_cnt = 0;
