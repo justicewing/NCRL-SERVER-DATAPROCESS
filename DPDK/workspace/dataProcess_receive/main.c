@@ -197,7 +197,7 @@ static void print_mbuf_send(struct rte_mbuf *m)
 {
 	uint8_t *adcnt;
 	FILE *fp;
-	fp = fopen("send_data", "a");
+	fp = fopen("send_data.txt", "a");
 	fprintf(fp, "buf_addr:%d\n", m->buf_addr);
 	fprintf(fp, "pkt_len:%d\n", m->pkt_len);
 	fprintf(fp, "data_len:%d\n", m->data_len);
@@ -212,7 +212,7 @@ static void print_mbuf_receive(struct rte_mbuf *m)
 {
 	uint8_t *adcnt;
 	FILE *fp;
-	fp = fopen("receive_data", "a");
+	fp = fopen("receive_data.txt", "a");
 	fprintf(fp, "buf_addr:%d\n", m->buf_addr);
 	fprintf(fp, "pkt_len:%d\n", m->pkt_len);
 	fprintf(fp, "data_len:%d\n", m->data_len);

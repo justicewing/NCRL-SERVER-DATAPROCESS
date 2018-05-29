@@ -57,7 +57,7 @@ pthread_mutex_t mutex_readyNum_tx;
 pthread_mutex_t mutex_readyNum_rx;
 int runIndex = 0;
 int buffisEmpty;
-int data[MAX_MBUFF];
+
 extern bool force_quit;
 
 const int CQI_mod[16] = {0, 2, 2, 2, 2, 2, 2, 4, 4, 4, 6, 6, 6, 6, 6, 6};
@@ -1337,7 +1337,7 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 
 	} // printf("data done\n");
 
-	FILE *fpbuff = fopen("result_buff", "a");
+	FILE *fpbuff = fopen("result_buff.txt", "a");
 	fprintf(fpbuff, "tbs:\n");
 	for (int i = 0; i < MAX_BEAM; i++)
 		fprintf(fpbuff, "%d, ", package->tbs[i]);
@@ -1349,18 +1349,28 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 	fprintf(fpbuff, "\n");
 
 	fprintf(fpbuff, "SNR:\n");
-	fprintf(fpbuff, "%f\n", package->SNR);
+	fprintf(fpbuff, "%.2f\n", package->SNR);
 
 	fprintf(fpbuff, "y:\n");
-	for (int i = 0; i < MAX_BEAM; i++)
-		fprintf(fpbuff, "%f+%fi, ", package->y[i].real, package->y[i].imag);
+	for (int j = 0; j < 1200 * 14; j++)
+	{
+		for (int i = 0; i < MAX_BEAM; i++)
+			fprintf(fpbuff, "%.2f+%.2fi, ", package->y[j * 8 + i].real, package->y[j * 8 + i].imag);
+		fprintf(fpbuff, "\n");
+	}
+
 	fprintf(fpbuff, "\n");
 
 	fprintf(fpbuff, "data:\n");
-	for (int i = 0; i < MAX_BEAM; i++)
-		fprintf(fpbuff, "%d, ", package->data[0][i]);
+	for (int j = 0; j < 1200 * 12 * 6; j++)
+	{
+		for (int i = 0; i < MAX_BEAM; i++)
+			fprintf(fpbuff, "%d, ", package->data[i][j]);
+		fprintf(fpbuff, "\n");
+	}
 	fprintf(fpbuff, "\n");
 	fprintf(fpbuff, "\n");
+	fclose(fpbuff);
 
 	return buff_length;
 }

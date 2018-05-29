@@ -36,7 +36,7 @@ extern sem_t cache_rx;
 #define PARA_NUM_TX 2 // 发送端同时处理子帧上限
 #define PARA_NUM_RX 5 // 接收端同时处理子帧上限
 const int SBNum = 50; // 信道估计相关
-//test
+// test
 struct package_t package_tx[PACK_CACHE];
 struct package_t package_rx[PACK_CACHE];
 int index_tx_write; // 发送段缓存写指针
@@ -874,7 +874,7 @@ void TaskScheduler_rx(void *arg)
 	for (int i = 0; i < PARA_NUM_RX; i++)
 		ServiceEN_rx[TASK_NUM_RX * i] = LayerNum;
 
-	FILE *fpr = fopen("result", "w");
+	FILE *fpr = fopen("result.txt", "w");
 
 	sem_post(&rx_prepared);
 	sem_post(&rx_prepared);
@@ -1122,6 +1122,7 @@ void TaskScheduler_rx(void *arg)
 								}
 							}
 						}
+						// printf("BERNUM:%d\n", BER->BERNum);
 					}
 					if (BLER_EN == 1 || BER_EN == 1)
 					{ //------Error information
@@ -1479,7 +1480,7 @@ int buff_to_package(struct package_t *package, unsigned char *buff)
 
 	} // printf("data done\n");
 
-	FILE *fpbuff = fopen("result_buff", "a");
+	FILE *fpbuff = fopen("result_buff.txt", "a");
 	fprintf(fpbuff, "tbs:\n");
 	for (int i = 0; i < MAX_BEAM; i++)
 		fprintf(fpbuff, "%d, ", package->tbs[i]);
@@ -1491,18 +1492,28 @@ int buff_to_package(struct package_t *package, unsigned char *buff)
 	fprintf(fpbuff, "\n");
 
 	fprintf(fpbuff, "SNR:\n");
-	fprintf(fpbuff, "%f\n", package->SNR);
+	fprintf(fpbuff, "%.2f\n", package->SNR);
 
 	fprintf(fpbuff, "y:\n");
-	for (int i = 0; i < MAX_BEAM; i++)
-		fprintf(fpbuff, "%f+%fi, ", package->y[i].real, package->y[i].imag);
+	for (int j = 0; j < 1200 * 14; j++)
+	{
+		for (int i = 0; i < MAX_BEAM; i++)
+			fprintf(fpbuff, "%.2f+%.2fi, ", package->y[j * 8 + i].real, package->y[j * 8 + i].imag);
+		fprintf(fpbuff, "\n");
+	}
+
 	fprintf(fpbuff, "\n");
 
 	fprintf(fpbuff, "data:\n");
-	for (int i = 0; i < MAX_BEAM; i++)
-		fprintf(fpbuff, "%d, ", package->data[0][i]);
+	for (int j = 0; j < 1200 * 12 * 6; j++)
+	{
+		for (int i = 0; i < MAX_BEAM; i++)
+			fprintf(fpbuff, "%d, ", package->data[i][j]);
+		fprintf(fpbuff, "\n");
+	}
 	fprintf(fpbuff, "\n");
 	fprintf(fpbuff, "\n");
+	fclose(fpbuff);
 
 	return buff_length;
 }
