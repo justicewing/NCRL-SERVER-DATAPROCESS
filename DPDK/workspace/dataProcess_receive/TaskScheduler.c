@@ -1101,6 +1101,17 @@ void TaskScheduler_rx(void *arg)
 					crc_check_args[j].subframeIndex = n;
 					crc_check_args[j].BERsignal = BERsignal;
 
+					FILE *fpdb = fopen("datab.txt", "a");
+					fprintf(fpdb, "datab:\n");
+					for (int k = 0; k < (MAX_DATA_LEN_RX + CRC_LENGTH) / 8; k++)
+					{
+						for (int l = 0; l < MAX_BEAM; l++)
+							fprintf(fpdb, "%d, ", data_bytes_rx[n][i][k]);
+						fprintf(fpdb, "\n");
+					}
+					fprintf(fpdb, "\n");
+					fclose(fpdb);
+
 					pool_add_task(crc_check, (void *)&crc_check_args[j], 3);
 				}
 				ServiceEN_rx[n * TASK_NUM_RX + 2] = 0;
