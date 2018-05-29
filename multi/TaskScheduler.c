@@ -341,7 +341,8 @@ void TaskScheduler_tx(void *arg)
 				//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
 				for (int j = 0; j < data_len_tx[k][i]; j++)
 				{
-					data_tx[k][i][j] = rand() % 2;
+					// data_tx[k][i][j] = rand() % 2;
+					data_tx[k][i][j] = 1;
 					//printf("%d",data_tx[k][i][j]);
 				}
 			}
@@ -395,7 +396,8 @@ void TaskScheduler_tx(void *arg)
 						//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
 						for (int j = 0; j < data_len_tx[n][i] / 8; j++)
 						{
-							data_bytes_tx[n][i][j] = rand() % 256;
+							// data_bytes_tx[n][i][j] = rand() % 256;
+							data_bytes_tx[n][i][j] = 0xFF;
 							//printf("%d",data_tx[k][i][j]);
 						}
 						srslte_bit_unpack_vector(data_bytes_tx[n][i], data_tx[n][i], data_len_tx[n][i]);
@@ -1041,6 +1043,17 @@ void TaskScheduler_rx(void *arg)
 
 						derm_crc_args[jp].ServiceEN_index = n * TASK_NUM_RX + 2;
 						derm_crc_args[jp].ServiceEN_rx = ServiceEN_rx;
+
+						FILE *fpl = fopen("llrd.txt", "a");
+						fprintf(fpl, "llrd:\n");
+						for (int k = 0; k < CARRIER_NUM * SYMBOL_NUM * 6; k++)
+						{
+							for (int l = 0; l < MAX_BEAM; l++)
+								fprintf(fpl, "%d, ", LLRD_Package[n][k * 8 + l]);
+							fprintf(fpl, "\n");
+						}
+						fprintf(fpl, "\n");
+						fclose(fpl);
 
 						pool_add_task(derm_crc, (void *)&derm_crc_args[jp], 3);
 						// printf("r = %d\n", r);
