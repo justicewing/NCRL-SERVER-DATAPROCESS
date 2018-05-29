@@ -464,6 +464,7 @@ l2fwd_main_p(void)
 				pthread_mutex_lock(&mutex_buffisEmpty);
 				buffisEmpty = 1;
 				pthread_mutex_unlock(&mutex_buffisEmpty);
+				break;
 			}
 
 			sendable_cnt++;

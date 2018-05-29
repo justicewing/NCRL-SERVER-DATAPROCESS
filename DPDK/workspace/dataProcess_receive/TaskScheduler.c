@@ -907,6 +907,10 @@ void TaskScheduler_rx(void *arg)
 					   startNum_tx, readyNum_tx, startNum_rx, readyNum_rx, buffisEmpty);
 				for (int i = 0; i < LayerNum; ++i)
 				{
+
+					// for (int j = 0; j < 16; j++)
+					// 	printf("py:%.2f+%.2fi\n", package_rx[index_rx_read].y[j].real, package_rx[index_rx_read].y[j].imag);
+
 					srslte_cbsegm(cb_rx[n][i], package_rx[index_rx_read].tbs[i]);
 					CQI_index[n * MAX_BEAM + i] = package_rx[index_rx_read].CQI_index[i];
 					test_rx[n].data[i] = package_rx[index_rx_read].data[i];
@@ -959,12 +963,24 @@ void TaskScheduler_rx(void *arg)
 					chest_calsym_args[j].ServiceEN_index = n * TASK_NUM_RX + 1;
 					chest_calsym_args[j].ServiceEN_rx = ServiceEN_rx;
 
+					// for (int b = 0; b < 16; b++)
+					// 	printf("cc:%.2f+%.2fi\n", chest_calsym_args[j].package[b].real, chest_calsym_args[j].package[b].imag);
+
+					FILE *fpy = fopen("y.txt", "a");
+					fprintf(fpy, "y:\n");
+					for (int k = 0; k < SIZE_Y / 8 / 8; k++)
+					{
+						for (int i = 0; i < MAX_BEAM; i++)
+							fprintf(fpy, "%.2f+%.2fi, ", chest_calsym_args[j].package[k * 8 + i].real, chest_calsym_args[j].package[k * 8 + i].imag);
+						fprintf(fpy, "\n");
+					}
+					fprintf(fpy, "\n");
+					fclose(fpy);
+
 					pool_add_task(chest_calsym, (void *)&chest_calsym_args[j], 3);
 				}
 				ServiceEN_rx[n * TASK_NUM_RX] = 0;
-				//printf("\nrx%d get package %d", n, index_tx_write);
-				//if (index_rx_read != 0)
-				//{
+
 				pthread_mutex_lock(&mutex_readyNum_rx);
 				readyNum_rx--;
 				pthread_mutex_unlock(&mutex_readyNum_rx);
@@ -1044,6 +1060,17 @@ void TaskScheduler_rx(void *arg)
 						derm_crc_args[jp].ServiceEN_index = n * TASK_NUM_RX + 2;
 						derm_crc_args[jp].ServiceEN_rx = ServiceEN_rx;
 
+						FILE *fpl = fopen("llrd.txt", "a");
+						fprintf(fpl, "llrd:\n");
+						for (int k = 0; k < CARRIER_NUM * SYMBOL_NUM * 6; k++)
+						{
+							for (int l = 0; l < MAX_BEAM; l++)
+								fprintf(fpl, "%d, ", LLRD_Package[n][k * 8 + l]);
+							fprintf(fpl, "\n");
+						}
+						fprintf(fpl, "\n");
+						fclose(fpl);
+
 						pool_add_task(derm_crc, (void *)&derm_crc_args[jp], 3);
 						// printf("r = %d\n", r);
 					}
@@ -1110,7 +1137,19 @@ void TaskScheduler_rx(void *arg)
 					{
 						for (int i = 0; i < LayerNum; i++)
 						{
+							// FILE *fpd = fopen("datatest.txt","a");
+							// fprintf(fpd, "Before:\n");
+							// for (int j = 0; j < 8; j++)
+							// {
+							// 	fprintf(fpd, "%d,%d,%d\n", data_bytes_rx[n][i][j], data_rx[n][i][j], data_len_rx[n][i]);
+							// }
 							srslte_bit_unpack_vector(data_bytes_rx[n][i], data_rx[n][i], data_len_rx[n][i]);
+							// fprintf(fpd, "After:\n");
+							// for (int j = 0; j < 8; j++)
+							// {
+							// 	fprintf(fpd, "%d,%d,%d\n", data_bytes_rx[n][i][j], data_rx[n][i][j], data_len_rx[n][i]);
+							// }
+							// fclose(fpd);
 							for (int j = 0; j < cb_rx[n][i]->tbs; j++)
 							{
 								BER->BitsNum++;
@@ -1122,7 +1161,27 @@ void TaskScheduler_rx(void *arg)
 								}
 							}
 						}
-						// printf("BERNUM:%d\n", BER->BERNum);
+						FILE *fpd = fopen("data.txt", "a");
+						fprintf(fpd, "data:\n");
+						for (int i = 0; i < LayerNum; i++)
+						{
+							for (int j = 0; j < cb_rx[n][i]->tbs; j++)
+							{
+								fprintf(fpd, "%d, ", test_rx[n].data[i][j]);
+							}
+							fprintf(fpd, "\n");
+						}
+						fprintf(fpd, "data_rx:\n");
+						for (int i = 0; i < LayerNum; i++)
+						{
+							for (int j = 0; j < cb_rx[n][i]->tbs; j++)
+							{
+								fprintf(fpd, "%d, ", data_rx[n][i][j]);
+							}
+							fprintf(fpd, "\n");
+						}
+						fclose(fpd);
+						printf("BERNUM:%d\n", BER->BERNum);
 					}
 					if (BLER_EN == 1 || BER_EN == 1)
 					{ //------Error information

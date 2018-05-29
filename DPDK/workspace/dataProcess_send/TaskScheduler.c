@@ -343,8 +343,9 @@ void TaskScheduler_tx(void *arg)
 				//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
 				for (int j = 0; j < data_len_tx[k][i]; j++)
 				{
-					data_tx[k][i][j] = rand() % 2;
-					//printf("%d",data_tx[k][i][j]);
+					// data_tx[k][i][j] = rand() % 2;
+					data_tx[k][i][j] = 1;
+										  //printf("%d",data_tx[k][i][j]);
 				}
 			}
 		}
@@ -396,8 +397,9 @@ void TaskScheduler_tx(void *arg)
 						//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
 						for (int j = 0; j < data_len_tx[n][i] / 8; j++)
 						{
-							data_bytes_tx[n][i][j] = rand() % 256;
-							//printf("%d",data_tx[k][i][j]);
+							// data_bytes_tx[n][i][j] = rand() % 256;
+							data_bytes_tx[n][i][j] = 0xFF;
+														   //printf("%d",data_tx[k][i][j]);
 						}
 						srslte_bit_unpack_vector(data_bytes_tx[n][i], data_tx[n][i], data_len_tx[n][i]);
 					}
