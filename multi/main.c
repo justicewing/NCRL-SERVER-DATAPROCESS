@@ -74,7 +74,7 @@ int main()
 	pool_init(2 + threadNum_tx + threadNum_rx, 1, 4);
 	printf("creat pool 4...\n");
 	pool_init(3 + threadNum_tx + threadNum_rx, 1, 5);
-	printf("creat pool 4...\n");
+	printf("creat pool 5...\n");
 
 	/* 添加发送端主任务 */
 	pool_add_task(TaskScheduler_tx, NULL, 0);
