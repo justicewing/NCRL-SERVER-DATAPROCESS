@@ -96,7 +96,7 @@ extern int buffisEmpty;
 int sendable;
 
 #define SENDABLE_FLAG 0xFF
-#define ONE_SEND_NUM 1
+#define ONE_SEND_NUM 32
 
 // static volatile bool force_quit;	// 不能在其他编译单元内使用
 volatile bool force_quit;

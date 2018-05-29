@@ -84,7 +84,7 @@ extern int buffisEmpty;
 int feedbackable;
 
 #define SENDABLE_FLAG 0xFF
-#define ONE_SEND_NUM 1
+#define ONE_SEND_NUM 32
 
 volatile bool force_quit;
 
@@ -230,9 +230,9 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 	int cnt = 0;
 
 	rte_pktmbuf_append(m, length + 16);
-	for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
-		*adcnt = 0x00;
-
+	// for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
+	// 	*adcnt = 0x00;
+	adcnt = (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *);
 	for (int i = 0; i < 16; i++)
 	{
 		*adcnt = 0xFF;
@@ -450,7 +450,7 @@ l2fwd_main_p(void)
 				printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 				continue;
 			}
-			package(data_to_be_sent, 16, m);
+			package(data_to_be_sent, 1, m);
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
 				; //printf("p!\n");
 

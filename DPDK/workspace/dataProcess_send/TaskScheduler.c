@@ -1336,6 +1336,32 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 		// printf("data%d done\n", j);
 
 	} // printf("data done\n");
+
+	FILE *fpbuff = fopen("result_buff", "a");
+	fprintf(fpbuff, "tbs:\n");
+	for (int i = 0; i < MAX_BEAM; i++)
+		fprintf(fpbuff, "%d, ", package->tbs[i]);
+	fprintf(fpbuff, "\n");
+
+	fprintf(fpbuff, "CQI:\n");
+	for (int i = 0; i < MAX_BEAM; i++)
+		fprintf(fpbuff, "%d, ", package->CQI_index[i]);
+	fprintf(fpbuff, "\n");
+
+	fprintf(fpbuff, "SNR:\n");
+	fprintf(fpbuff, "%f\n", package->SNR);
+
+	fprintf(fpbuff, "y:\n");
+	for (int i = 0; i < MAX_BEAM; i++)
+		fprintf(fpbuff, "%f+%fi, ", package->y[i].real, package->y[i].imag);
+	fprintf(fpbuff, "\n");
+
+	fprintf(fpbuff, "data:\n");
+	for (int i = 0; i < MAX_BEAM; i++)
+		fprintf(fpbuff, "%d, ", package->data[0][i]);
+	fprintf(fpbuff, "\n");
+	fprintf(fpbuff, "\n");
+
 	return buff_length;
 }
 
