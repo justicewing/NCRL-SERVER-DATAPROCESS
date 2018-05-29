@@ -983,27 +983,27 @@ void TaskScheduler_rx(void *arg)
 
 					pool_add_task(chest_calsym, (void *)&chest_calsym_args[j], 3);
 				}
-				
+
 				ServiceEN_rx[n * TASK_NUM_RX] = 0;
 				FILE *fpbuff = fopen("package.txt", "a");
 				fprintf(fpbuff, "tbs:\n");
 				for (int i = 0; i < MAX_BEAM; i++)
-					fprintf(fpbuff, "%d, ", package_rx[index_rx_read]->tbs[i]);
+					fprintf(fpbuff, "%d, ", package_rx[index_rx_read].tbs[i]);
 				fprintf(fpbuff, "\n");
 
 				fprintf(fpbuff, "CQI:\n");
 				for (int i = 0; i < MAX_BEAM; i++)
-					fprintf(fpbuff, "%d, ", package_rx[index_rx_read]->CQI_index[i]);
+					fprintf(fpbuff, "%d, ", package_rx[index_rx_read].CQI_index[i]);
 				fprintf(fpbuff, "\n");
 
 				fprintf(fpbuff, "SNR:\n");
-				fprintf(fpbuff, "%.2f\n", package_rx[index_rx_read]->SNR);
+				fprintf(fpbuff, "%.2f\n", package_rx[index_rx_read].SNR);
 
 				fprintf(fpbuff, "y:\n");
 				for (int j = 0; j < 1200 * 14; j++)
 				{
 					for (int i = 0; i < MAX_BEAM; i++)
-						fprintf(fpbuff, "%.2f+%.2fi, ", package_rx[index_rx_read]->y[j * 8 + i].real, package_rx[index_rx_read]->y[j * 8 + i].imag);
+						fprintf(fpbuff, "%.2f+%.2fi, ", package_rx[index_rx_read].y[j * 8 + i].real, package_rx[index_rx_read].y[j * 8 + i].imag);
 					fprintf(fpbuff, "\n");
 				}
 
@@ -1013,7 +1013,7 @@ void TaskScheduler_rx(void *arg)
 				for (int j = 0; j < 1200 * 12 * 6; j++)
 				{
 					for (int i = 0; i < MAX_BEAM; i++)
-						fprintf(fpbuff, "%d, ", package_rx[index_rx_read]->data[i][j]);
+						fprintf(fpbuff, "%d, ", package_rx[index_rx_read].data[i][j]);
 					fprintf(fpbuff, "\n");
 				}
 				fprintf(fpbuff, "\n");
