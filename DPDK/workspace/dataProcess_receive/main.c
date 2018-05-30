@@ -198,7 +198,8 @@ print_stats(void)
 		   total_packets_dropped);
 	printf("\n====================================================\n");
 }
-static void print_mbuf_send(struct rte_mbuf *m)
+static void
+print_mbuf_send(struct rte_mbuf *m)
 {
 	uint8_t *adcnt;
 	FILE *fp;
@@ -213,7 +214,8 @@ static void print_mbuf_send(struct rte_mbuf *m)
 	fprintf(fp, "over\n");
 	fclose(fp);
 }
-static void print_mbuf_receive(struct rte_mbuf *m)
+static void
+print_mbuf_receive(struct rte_mbuf *m)
 {
 	uint8_t *adcnt;
 	FILE *fp;
