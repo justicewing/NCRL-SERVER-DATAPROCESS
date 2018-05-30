@@ -24,14 +24,17 @@ void derm_crc(void *arg)
 	int s = derm_crc_args.symindex;
 	//derm
 	bzero(derm_crc_args.cb_tdec, 6176 * 3 * sizeof(int16_t));
-	srslte_rm_turbo_rx_lut(derm_crc_args.LLRD_Package + s * derm_crc_args.SymbolBitN, derm_crc_args.cb_tdec, derm_crc_args.cbs_rm, derm_crc_args.detc_cb_sizes[derm_crc_args.Kr], derm_crc_args.rv_idx);
 
 	FILE *fp = fopen("derm.txt", "a");
 	for (int i = 0; i < 32; i++)
-	{
-		fprintf(fp, "LLRD_Package[%d]:%d\n", i, derm_crc_args.LLRD_Package[i]);
+		fprintf(fp, "tdec0[%d]:%d\n", i, derm_crc_args.cb_tdec[i]);
+
+	srslte_rm_turbo_rx_lut(derm_crc_args.LLRD_Package + s * derm_crc_args.SymbolBitN, derm_crc_args.cb_tdec, derm_crc_args.cbs_rm, derm_crc_args.detc_cb_sizes[derm_crc_args.Kr], derm_crc_args.rv_idx);
+
+	for (int i = 0; i < 32; i++)
 		fprintf(fp, "tdec[%d]:%d\n", i, derm_crc_args.cb_tdec[i]);
-	}
+	for (int i = 0; i < 32; i++)
+		fprintf(fp, "LLRD_Package[%d]:%d\n", i, derm_crc_args.LLRD_Package[i]);
 	fprintf(fp, "symindex:%d\n", derm_crc_args.symindex);
 	fprintf(fp, "SymbolBitN:%d\n", derm_crc_args.SymbolBitN);
 	fprintf(fp, "cbs_rm:%d\n", derm_crc_args.cbs_rm);
