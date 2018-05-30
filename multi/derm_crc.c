@@ -25,13 +25,6 @@ void derm_crc(void *arg)
 	//derm
 	bzero(derm_crc_args.cb_tdec, 6176 * 3 * sizeof(int16_t));
 	srslte_rm_turbo_rx_lut(derm_crc_args.LLRD_Package + s * derm_crc_args.SymbolBitN, derm_crc_args.cb_tdec, derm_crc_args.cbs_rm, derm_crc_args.detc_cb_sizes[derm_crc_args.Kr], derm_crc_args.rv_idx);
-	for (int i = 0; i < 3 * derm_crc_args.Kr + 12; i++)
-	{
-		if (derm_crc_args.cb_tdec[i] > 64)
-			derm_crc_args.cb_tdec[i] = 64;
-		else if (derm_crc_args.cb_tdec[i] < -64)
-			derm_crc_args.cb_tdec[i] = -64;
-	}
 
 	FILE *fp = fopen("derm.txt", "a");
 	for (int i = 0; i < 32; i++)
@@ -44,6 +37,14 @@ void derm_crc(void *arg)
 	fprintf(fp, "detc_cb_sizes[%d]:%d\n", derm_crc_args.Kr, derm_crc_args.detc_cb_sizes[derm_crc_args.Kr]);
 	fprintf(fp, "rv_idx:%d\n", derm_crc_args.rv_idx);
 	fclose(fp);
+
+	for (int i = 0; i < 3 * derm_crc_args.Kr + 12; i++)
+	{
+		if (derm_crc_args.cb_tdec[i] > 64)
+			derm_crc_args.cb_tdec[i] = 64;
+		else if (derm_crc_args.cb_tdec[i] < -64)
+			derm_crc_args.cb_tdec[i] = -64;
+	}
 
 	//decode
 	srslte_tdec_run_all(derm_crc_args.tdec, derm_crc_args.cb_tdec, derm_crc_args.cb_crc, derm_crc_args.nof_iterations, derm_crc_args.Kr);
