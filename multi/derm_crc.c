@@ -33,7 +33,7 @@ void derm_crc(void *arg)
 
 	for (int i = 0; i < 32; i++)
 		fprintf(fp, "tdec[%d]:%d\n", i, derm_crc_args.cb_tdec[i]);
-	for (int i = 0; i < 32; i++)
+	for (int i = 0; i < (s + 1) * derm_crc_args.SymbolBitN; i++)
 		fprintf(fp, "LLRD_Package[%d]:%d\n", i, derm_crc_args.LLRD_Package[i]);
 	fprintf(fp, "symindex:%d\n", derm_crc_args.symindex);
 	fprintf(fp, "SymbolBitN:%d\n", derm_crc_args.SymbolBitN);
