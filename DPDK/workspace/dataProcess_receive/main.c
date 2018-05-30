@@ -229,7 +229,7 @@ static void print_mbuf_receive(struct rte_mbuf *m)
 	fclose(fp);
 }
 
-int package(unsigned char *data, int length, struct rte_mbuf *m)
+int package(uint8_t *data, int length, struct rte_mbuf *m)
 {
 	uint8_t *adcnt = NULL;
 	int cnt = 0;
@@ -256,7 +256,7 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 	return 0;
 }
 
-int depackage(unsigned char *data, int length, uint8_t *adcnt)
+int depackage(uint8_t *data, int length, uint8_t *adcnt)
 {
 	int cnt = 0;
 	adcnt += 16;
@@ -268,7 +268,7 @@ int depackage(unsigned char *data, int length, uint8_t *adcnt)
 	return 0;
 }
 
-static int
+static void
 l2fwd_main_loop_send(void)
 {
 
@@ -369,7 +369,6 @@ l2fwd_main_loop_send(void)
 		}
 	}
 }
-
 static void
 l2fwd_main_loop_receive(void)
 {
@@ -532,6 +531,8 @@ l2fwd_main_c(void)
 	sem_post(&feedback_sem);
 	sem_post(&sem_buffisnotEmpty);
 }
+
+
 static int
 l2fwd_launch_one_lcore_send(__attribute__((unused)) void *dummy)
 {

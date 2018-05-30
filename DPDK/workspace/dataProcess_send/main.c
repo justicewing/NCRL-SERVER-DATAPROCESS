@@ -95,7 +95,7 @@ extern int buffisEmpty;
 
 #define SENDABLE_FLAG 0xFF
 #define ONE_SEND_NUM 1
-#define SEND_TOKEN_INIT 2
+#define SEND_TOKEN_INIT 4
 
 int sendable;
 int send_token = SEND_TOKEN_INIT;
@@ -209,7 +209,8 @@ print_stats(void)
 		   total_packets_dropped);
 	printf("\n====================================================\n");
 }
-static void print_mbuf_send(struct rte_mbuf *m)
+static void
+print_mbuf_send(struct rte_mbuf *m)
 {
 	uint8_t *adcnt;
 	FILE *fp;
@@ -224,7 +225,8 @@ static void print_mbuf_send(struct rte_mbuf *m)
 	fprintf(fp, "over\n");
 	fclose(fp);
 }
-static void print_mbuf_receive(struct rte_mbuf *m)
+static void
+print_mbuf_receive(struct rte_mbuf *m)
 {
 	uint8_t *adcnt;
 	FILE *fp;
@@ -267,7 +269,7 @@ int package(unsigned char *data, int length, struct rte_mbuf *m)
 	return 0;
 }
 
-static int
+static void
 l2fwd_main_loop_send(void)
 {
 
@@ -365,7 +367,6 @@ l2fwd_main_loop_send(void)
 		}
 	}
 }
-
 static void
 l2fwd_main_loop_receive(void)
 {
@@ -525,6 +526,7 @@ l2fwd_main_c(void)
 	// 结束后叫醒
 	// sem_post(&sendable_sem);
 }
+
 static int
 l2fwd_launch_one_lcore_send(__attribute__((unused)) void *dummy)
 {
@@ -537,11 +539,13 @@ l2fwd_launch_one_lcore_receive(__attribute__((unused)) void *dummy)
 	l2fwd_main_loop_receive();
 	return 0;
 }
+static int
 l2fwd_launch_one_lcore_p(__attribute__((unused)) void *dummy)
 {
 	l2fwd_main_p();
 	return 0;
 }
+static int
 l2fwd_launch_one_lcore_c(__attribute__((unused)) void *dummy)
 {
 	l2fwd_main_c();
