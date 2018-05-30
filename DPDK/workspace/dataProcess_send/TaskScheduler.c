@@ -56,7 +56,7 @@ pthread_mutex_t mutex_startNum_rx;
 pthread_mutex_t mutex_readyNum_tx;
 pthread_mutex_t mutex_readyNum_rx;
 int runIndex = 0;
-int buffisEmpty;
+int buff_empty;
 
 extern bool force_quit;
 
@@ -903,7 +903,7 @@ void TaskScheduler_rx(void *arg)
 				// printf("CNT:%d,tx_write:%d,tx_read:%d,rx_write:%d,rx_read:%d\n",
 				// 	   ++cnt, index_tx_write, index_tx_read, index_rx_write, index_rx_read);
 				// printf("\tstart_tx:%d,ready_tx:%d,start_rx:%d,ready_rx:%d,empty:%d\n",
-				// 	   startNum_tx, readyNum_tx, startNum_rx, readyNum_rx, buffisEmpty);
+				// 	   startNum_tx, readyNum_tx, startNum_rx, readyNum_rx, buff_empty);
 				for (int i = 0; i < LayerNum; ++i)
 				{
 					srslte_cbsegm(cb_rx[n][i], package_rx[index_rx_read].tbs[i]);
@@ -1218,10 +1218,10 @@ uint8_t *databuff;
 extern sem_t tx_buff_can_be_destroyed;
 // extern sem_t tx_prepared;
 // extern sem_t tx_buff_prepared;
-extern sem_t buffisnotEmpty;
+extern sem_t buff_full;
 
-// int buffisEmpty;
-pthread_mutex_t mutex_buffisEmpty;
+// int buff_empty;
+pthread_mutex_t mutex_buff_empty;
 
 int package_to_buff(struct package_t *package, uint8_t *buff_p);
 
@@ -1229,9 +1229,9 @@ void Tx_buff(void *arg)
 {
 	// printf("tx buff start\n");
 	index_tx_read = 0;
-	buffisEmpty = 1;
+	buff_empty = 1;
 	databuff = (unsigned char *)malloc(DATABUFF_SZIE);
-	pthread_mutex_init(&mutex_buffisEmpty, NULL);
+	pthread_mutex_init(&mutex_buff_empty, NULL);
 	printf("Tx Buff prepared...\n");
 	sem_post(&tx_buff_prepared);
 	sem_wait(&tx_prepared);
@@ -1241,7 +1241,7 @@ void Tx_buff(void *arg)
 		// printf("aaaaaa……\n");
 		if (readyNum_tx == 0)
 			sem_wait(&cache_tx);
-		if (readyNum_tx > 0 && buffisEmpty)
+		if (readyNum_tx > 0 && buff_empty)
 		{
 			// printf("\ntx buff circle start:%d\n", index_tx_read);
 			package_to_buff(&package_tx[index_tx_read], databuff);
@@ -1255,16 +1255,16 @@ void Tx_buff(void *arg)
 			pthread_mutex_lock(&mutex_startNum_tx);
 			startNum_tx--;
 			pthread_mutex_unlock(&mutex_startNum_tx);
-			pthread_mutex_lock(&mutex_buffisEmpty);
-			buffisEmpty = 0;
-			pthread_mutex_unlock(&mutex_buffisEmpty);
-			sem_post(&buffisnotEmpty);
-			// printf("buffisEmpty:%d\n", buffisEmpty);
+			pthread_mutex_lock(&mutex_buff_empty);
+			buff_empty = 0;
+			pthread_mutex_unlock(&mutex_buff_empty);
+			sem_post(&buff_full);
+			// printf("buff_empty:%d\n", buff_empty);
 			// printf("tx buff circle end\n");
 		}
 	}
-	sem_post(&buffisnotEmpty);
-	pthread_mutex_destroy(&mutex_buffisEmpty);
+	sem_post(&buff_full);
+	pthread_mutex_destroy(&mutex_buff_empty);
 	sem_post(&tx_buff_can_be_destroyed);
 }
 
@@ -1403,9 +1403,9 @@ void Rx_buff(void *arg)
 	// printf("rx buff start\n");	
 	while (!force_quit)
 	{
-		if (buffisEmpty)
-			sem_wait(&buffisnotEmpty);
-		if (startNum_rx < PACK_CACHE && (!buffisEmpty))
+		if (buff_empty)
+			sem_wait(&buff_full);
+		if (startNum_rx < PACK_CACHE && (!buff_empty))
 		{
 			pthread_mutex_lock(&mutex_startNum_rx);
 			startNum_rx++;
@@ -1422,9 +1422,9 @@ void Rx_buff(void *arg)
 			readyNum_rx++;
 			pthread_mutex_unlock(&mutex_readyNum_rx);
 			sem_post(&cache_rx);
-			pthread_mutex_lock(&mutex_buffisEmpty);
-			buffisEmpty = 1;
-			pthread_mutex_unlock(&mutex_buffisEmpty);
+			pthread_mutex_lock(&mutex_buff_empty);
+			buff_empty = 1;
+			pthread_mutex_unlock(&mutex_buff_empty);
 		}
 	}
 	sem_post(&cache_rx);

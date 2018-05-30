@@ -76,32 +76,23 @@
 1. 无法接收部分包
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .8\textwidth]{result_drop.png}
+	% \includegraphics[width = .8\textwidth]{fault_dumped.png}
 	\caption{无法接收部分包}
 \end{figure}
+2. 接收端Turbo译码错误
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .8\textwidth]{drop_fix.png}
-	\caption{添加全1位}
-\end{figure}
-2. 接收端速率匹配错误
-\begin{figure}[H]
-	\centering
-	\includegraphics[width = .8\textwidth]{receive_res_ber.png}
-	\caption{接收端服务器显示}
-\end{figure}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width = .8\textwidth]{tdec_error.png}
-	\caption{速率匹配错误}
+	% \includegraphics[width = .8\textwidth]{fault_dev.png}
+	\caption{接收端服务器显示（译码错误）}
 \end{figure}
 \begin{lstlisting}
 void srslte_rm_turbo_gentables();
 \end{lstlisting}
+
 \subsection{实现结果}
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .8\textwidth]{result1.png}
+	% \includegraphics[width = .8\textwidth]{structure_mbuf.jpg}
 	\caption{接收端服务器显示}
 \end{figure}
 
@@ -123,7 +114,7 @@ void srslte_rm_turbo_gentables();
 1. 内存溢出错误
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = \textwidth]{receive_res_dumped.png}
+	% \includegraphics[width = \textwidth]{makefile_compare.png}
 	\caption{内存溢出报错}
 \end{figure}
 2. 拷贝过程的简化

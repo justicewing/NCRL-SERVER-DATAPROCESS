@@ -80,7 +80,7 @@ sem_t tx_buff_prepared;
 sem_t rx_buff_prepared;
 sem_t cache_tx;
 sem_t cache_rx;
-sem_t buffisnotEmpty;
+sem_t buff_full;
 
 /* 声明信号量 */
 sem_t lcore_send_prepared;
@@ -90,11 +90,10 @@ sem_t lcore_c_prepared;
 sem_t sendable_sem;
 
 extern uint8_t *databuff;
-extern pthread_mutex_t mutex_buffisEmpty;
-extern int buffisEmpty;
+extern pthread_mutex_t mutex_buff_empty;
+extern int buff_empty;
 
 #define SENDABLE_FLAG 0xFF
-#define ONE_SEND_NUM 1
 #define SEND_TOKEN_INIT 4
 
 int sendable;
@@ -319,27 +318,27 @@ l2fwd_main_loop_send(void)
 		 * TX burst queue drain
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
-		if (unlikely((diff_tsc > drain_tsc)) && send_token > 0)
+		if (unlikely((diff_tsc > drain_tsc)) && (send_token > 0))
 		{
 			portid = 0;
 			buffer = tx_buffer[portid];
 
-			for (j = 0; j < 4; j++)
+			// for (j = 0; j < 4; j++)
+			// {
+			if (rte_ring_mc_dequeue(ring_send, e) < 0)
+				;
+			else
 			{
-				if (rte_ring_mc_dequeue(ring_send, e) < 0)
-					;
-				else
-				{
-					pthread_mutex_lock(&mutex_send_token);
-					send_token--;
-					pthread_mutex_unlock(&mutex_send_token);
-					// print_mbuf_send(*(struct rte_mbuf **)e);
-					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
-					port_statistics[portid].tx += sent;
-					rte_pktmbuf_free(*(struct rte_mbuf **)e);
-					e = &d;
-				}
+				pthread_mutex_lock(&mutex_send_token);
+				send_token--;
+				pthread_mutex_unlock(&mutex_send_token);
+				// print_mbuf_send(*(struct rte_mbuf **)e);
+				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
+				port_statistics[portid].tx += sent;
+				rte_pktmbuf_free(*(struct rte_mbuf **)e);
+				e = &d;
 			}
+			// }
 			sent = rte_eth_tx_buffer_flush(portid, 0, buffer);
 			port_statistics[portid].tx += sent;
 
@@ -415,24 +414,7 @@ l2fwd_main_p(void)
 	int cnt = 0;
 	int packet_num_threw_in_ring = 0;
 	long long int packet_num_want_to_send = 1;
-	// uint16_t pcnt = 0;
 	int indx_seg = 0;
-
-	// int total_length = 0;
-	// data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * SEG_SIZE * MBUFF_DATA_LENGTH);
-	// for (cnt = 0; cnt < SEG_SIZE * MBUFF_DATA_LENGTH / 2; cnt++)
-	// {
-	// 	data_to_be_sent[cnt * 2] = (cnt % (256 * 256)) >> 8;
-	// 	data_to_be_sent[cnt * 2 + 1] = (cnt % (256 * 256));
-	// }
-
-	// data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * MBUFF_DATA_LENGTH);
-
-	// for (cnt = 0; cnt < MBUFF_DATA_LENGTH; cnt++)
-	// {
-	// 	data_to_be_sent[cnt] = (cnt % (256));
-	// }
-	// data_to_be_sent[0] = 0xFF;
 
 	struct rte_mbuf *m;
 	int sendable_cnt = 0;
@@ -443,9 +425,7 @@ l2fwd_main_p(void)
 
 	while (!force_quit)
 	{
-		// if (send_token <= 0)
-		// 	sem_wait(&sendable_sem);
-		if ((!rte_ring_full(ring_send)) && (!buffisEmpty))
+		if ((!rte_ring_full(ring_send)) && (!buff_empty))
 		{
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 			if (m == NULL)
@@ -453,41 +433,23 @@ l2fwd_main_p(void)
 				printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 				continue;
 			}
-			// data_to_be_sent[indx_seg * MBUFF_DATA_LENGTH] = 0xFF;
-			// package(data_to_be_sent + MBUFF_DATA_LENGTH * indx_seg, MBUFF_DATA_LENGTH, m);
-
-			// data_to_be_sent[0] = pcnt;
 			package(databuff + MBUFF_DATA_LENGTH * indx_seg, MBUFF_DATA_LENGTH, m);
-			//	printf("total_length=  %d\n",total_length);
 
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
-				; //printf("p!\n");
-
-			// pthread_mutex_lock(&mutex_send_token);
-			// send_token--;
-			// pthread_mutex_unlock(&mutex_send_token);
+				;
 
 			packet_num_threw_in_ring++;
-			// pcnt++;
 
 			// databuff定位
 			indx_seg++;
 			if (indx_seg >= SEG_SIZE)
 			{
 				indx_seg = 0;
-				pthread_mutex_lock(&mutex_buffisEmpty);
-				buffisEmpty = 1;
-				pthread_mutex_unlock(&mutex_buffisEmpty);
+				pthread_mutex_lock(&mutex_buff_empty);
+				buff_empty = 1;
+				pthread_mutex_unlock(&mutex_buff_empty);
 			}
-
-			// sendable_cnt++;
-			// if (sendable_cnt >= ONE_SEND_NUM)
-			// {
-			// 	sendable = 0;
-			// 	sendable_cnt = 0;
-			// }
 		}
-		// }
 	}
 	printf("入列的包个数%d\n", packet_num_threw_in_ring);
 }
@@ -508,7 +470,6 @@ l2fwd_main_c(void)
 	{
 		if (rte_ring_mc_dequeue(ring_receive, e) < 0)
 			;
-		//printf("!\n");
 		else
 		{
 			adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
@@ -517,8 +478,6 @@ l2fwd_main_c(void)
 				pthread_mutex_lock(&mutex_send_token);
 				send_token++;
 				pthread_mutex_unlock(&mutex_send_token);
-				// sendable = 1;
-				// sem_post(&sendable_sem);
 			}
 			rte_pktmbuf_free(*(struct rte_mbuf **)e);
 		}
@@ -776,7 +735,7 @@ int main(int argc, char **argv)
 	sem_init(&rx_buff_prepared, 0, 0);
 	sem_init(&cache_tx, 0, 0);
 	sem_init(&cache_rx, 0, 0);
-	sem_init(&buffisnotEmpty, 0, 0);
+	sem_init(&buff_full, 0, 0);
 
 	/* 初始化线程池 */
 	// pool_init(0, 1, 0);
@@ -853,7 +812,7 @@ int main(int argc, char **argv)
 	// sem_destroy(&rx_buff_prepared);
 	sem_destroy(&cache_tx);
 	// sem_destroy(&cache_rx);
-	sem_destroy(&buffisnotEmpty);
+	sem_destroy(&buff_full);
 
 	printf("Closing port %d...", portid);
 	rte_eth_dev_stop(portid);
