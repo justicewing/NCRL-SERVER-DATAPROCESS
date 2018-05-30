@@ -33,9 +33,11 @@ void derm_crc(void *arg)
 		fprintf(fp, "tdec[%d]:%d\n", i, derm_crc_args.cb_tdec[i]);
 	}
 	fprintf(fp, "symindex:%d\n", derm_crc_args.symindex);
+	fprintf(fp, "SymbolBitN:%d\n", derm_crc_args.SymbolBitN);
 	fprintf(fp, "cbs_rm:%d\n", derm_crc_args.cbs_rm);
 	fprintf(fp, "detc_cb_sizes[%d]:%d\n", derm_crc_args.Kr, derm_crc_args.detc_cb_sizes[derm_crc_args.Kr]);
 	fprintf(fp, "rv_idx:%d\n", derm_crc_args.rv_idx);
+	fprintf(fp, "\n");
 	fclose(fp);
 
 	for (int i = 0; i < 3 * derm_crc_args.Kr + 12; i++)
