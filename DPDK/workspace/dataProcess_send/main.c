@@ -93,10 +93,13 @@ extern uint8_t *databuff;
 extern pthread_mutex_t mutex_buffisEmpty;
 extern int buffisEmpty;
 
-int sendable;
-
 #define SENDABLE_FLAG 0xFF
-#define ONE_SEND_NUM 32
+#define ONE_SEND_NUM 1
+#define SEND_TOKEN_INIT 2
+
+int sendable;
+int send_token = SEND_TOKEN_INIT;
+pthread_mutex_t mutex_send_token;
 
 // static volatile bool force_quit;	// 不能在其他编译单元内使用
 volatile bool force_quit;
@@ -314,7 +317,7 @@ l2fwd_main_loop_send(void)
 		 * TX burst queue drain
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
-		if (unlikely((diff_tsc > drain_tsc)))
+		if (unlikely((diff_tsc > drain_tsc)) && send_token > 0)
 		{
 			portid = 0;
 			buffer = tx_buffer[portid];
@@ -325,6 +328,9 @@ l2fwd_main_loop_send(void)
 					;
 				else
 				{
+					pthread_mutex_lock(&mutex_send_token);
+					send_token--;
+					pthread_mutex_unlock(&mutex_send_token);
 					// print_mbuf_send(*(struct rte_mbuf **)e);
 					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
 					port_statistics[portid].tx += sent;
@@ -350,7 +356,8 @@ l2fwd_main_loop_send(void)
 					// print_stats();
 					// printf("%d\n", running_second);
 					send_rate = (port_statistics[portid].tx * mac_length_send * 8 / running_second) / 1000000000.0;
-					// printf("send_rate= %f Gb\nreceive_rate= %f Gb\n", send_rate, receive_rated					timer_tsc = 0;
+					// printf("send_rate= %f Gb\nreceive_rate= %f Gb\n", send_rate, receive_rated
+					// timer_tsc = 0;
 				}
 			}
 
@@ -407,7 +414,7 @@ l2fwd_main_p(void)
 	int cnt = 0;
 	int packet_num_threw_in_ring = 0;
 	long long int packet_num_want_to_send = 1;
-	uint16_t pcnt = 0;
+	// uint16_t pcnt = 0;
 	int indx_seg = 0;
 
 	// int total_length = 0;
@@ -435,9 +442,9 @@ l2fwd_main_p(void)
 
 	while (!force_quit)
 	{
-		if (sendable == 0)
-			sem_wait(&sendable_sem);
-		if (sendable == 1 && (!buffisEmpty))
+		// if (send_token <= 0)
+		// 	sem_wait(&sendable_sem);
+		if ((!rte_ring_full(ring_send)) && (!buffisEmpty))
 		{
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 			if (m == NULL)
@@ -455,8 +462,14 @@ l2fwd_main_p(void)
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
 				; //printf("p!\n");
 
+			// pthread_mutex_lock(&mutex_send_token);
+			// send_token--;
+			// pthread_mutex_unlock(&mutex_send_token);
+
 			packet_num_threw_in_ring++;
-			pcnt++;
+			// pcnt++;
+
+			// databuff定位
 			indx_seg++;
 			if (indx_seg >= SEG_SIZE)
 			{
@@ -466,12 +479,12 @@ l2fwd_main_p(void)
 				pthread_mutex_unlock(&mutex_buffisEmpty);
 			}
 
-			sendable_cnt++;
-			if (sendable_cnt >= ONE_SEND_NUM)
-			{
-				sendable = 0;
-				sendable_cnt = 0;
-			}
+			// sendable_cnt++;
+			// if (sendable_cnt >= ONE_SEND_NUM)
+			// {
+			// 	sendable = 0;
+			// 	sendable_cnt = 0;
+			// }
 		}
 		// }
 	}
@@ -500,14 +513,17 @@ l2fwd_main_c(void)
 			adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
 			if (*adcnt == SENDABLE_FLAG)
 			{
-				sendable = 1;
-				sem_post(&sendable_sem);
+				pthread_mutex_lock(&mutex_send_token);
+				send_token++;
+				pthread_mutex_unlock(&mutex_send_token);
+				// sendable = 1;
+				// sem_post(&sendable_sem);
 			}
 			rte_pktmbuf_free(*(struct rte_mbuf **)e);
 		}
 	}
 	// 结束后叫醒
-	sem_post(&sendable_sem);
+	// sem_post(&sendable_sem);
 }
 static int
 l2fwd_launch_one_lcore_send(__attribute__((unused)) void *dummy)
@@ -610,7 +626,7 @@ signal_handler(int signum)
 
 int main(int argc, char **argv)
 {
-	sendable = 1;
+	// sendable = 1;
 	int ret;
 	uint8_t nb_ports;
 	uint8_t portid;
@@ -741,6 +757,8 @@ int main(int argc, char **argv)
 	pthread_mutex_init(&mutex1_rx, NULL);
 	pthread_mutex_init(&mutex2_rx, NULL);
 	pthread_mutex_init(&mutex3_rx, NULL);
+
+	pthread_mutex_init(&mutex_send_token, NULL);
 
 	/* for TaskScheduler */
 	/* 初始化信号量 */

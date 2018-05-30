@@ -903,11 +903,11 @@ void TaskScheduler_rx(void *arg)
 				// 	index_rx_read = index_tx_write;
 				// else
 				// 	index_rx_read = 0;
-				// printf("CNT:%d,tx_write:%d,tx_read:%d,rx_write:%d,rx_read:%d\n",
-				// 	   ++cnt, index_tx_write, index_tx_read, index_rx_write, index_rx_read);
-				// printf("\tstart_tx:%d,ready_tx:%d,start_rx:%d,ready_rx:%d,empty:%d\n",
-				// 	   startNum_tx, readyNum_tx, startNum_rx, readyNum_rx, buffisEmpty);
-				printf("Package Count:%d\n", ++cnt);
+				printf("CNT:%d,tx_write:%d,tx_read:%d,rx_write:%d,rx_read:%d\n",
+					   cnt++, index_tx_write, index_tx_read, index_rx_write, index_rx_read);
+				printf("\tstart_tx:%d,ready_tx:%d,start_rx:%d,ready_rx:%d,empty:%d\n",
+					   startNum_tx, readyNum_tx, startNum_rx, readyNum_rx, buffisEmpty);
+				// printf("Package Count:%d\n", cnt++);
 				for (int i = 0; i < LayerNum; ++i)
 				{
 
@@ -1491,6 +1491,7 @@ void Rx_buff(void *arg)
 	index_rx_write = 0;
 	// printf("rx buff start\n");
 	printf("Rx Buff prepared...\n");
+	int rxbuff_cnt = 0;
 	sem_post(&rx_buff_prepared);
 	sem_wait(&rx_prepared);
 	// printf("rx buff start\n");
@@ -1503,6 +1504,7 @@ void Rx_buff(void *arg)
 			pthread_mutex_lock(&mutex_startNum_rx);
 			startNum_rx++;
 			pthread_mutex_unlock(&mutex_startNum_rx);
+			printf("rxbuff_cnt:%d\n", rxbuff_cnt++);
 			// printf("\nrx buff circle start:%d\n", index_rx_write);
 			// printf("startNum_rx = %d\n", startNum_rx);
 			// printf("readyNum_rx = %d\n", readyNum_rx);

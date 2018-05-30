@@ -345,7 +345,7 @@ void TaskScheduler_tx(void *arg)
 				{
 					data_tx[k][i][j] = rand() % 2;
 					// data_tx[k][i][j] = 1;
-										  //printf("%d",data_tx[k][i][j]);
+					//printf("%d",data_tx[k][i][j]);
 				}
 			}
 		}
@@ -399,7 +399,7 @@ void TaskScheduler_tx(void *arg)
 						{
 							data_bytes_tx[n][i][j] = rand() % 256;
 							// data_bytes_tx[n][i][j] = 0xFF;
-														   //printf("%d",data_tx[k][i][j]);
+							//printf("%d",data_tx[k][i][j]);
 						}
 						srslte_bit_unpack_vector(data_bytes_tx[n][i], data_tx[n][i], data_len_tx[n][i]);
 					}
@@ -1400,7 +1400,7 @@ void Rx_buff(void *arg)
 	printf("Rx Buff prepared...\n");
 	sem_post(&rx_buff_prepared);
 	sem_wait(&rx_prepared);
-	// printf("rx buff start\n");
+	// printf("rx buff start\n");	
 	while (!force_quit)
 	{
 		if (buffisEmpty)
@@ -1412,7 +1412,7 @@ void Rx_buff(void *arg)
 			pthread_mutex_unlock(&mutex_startNum_rx);
 			// printf("\nrx buff circle start:%d\n", index_rx_write);
 			// printf("startNum_rx = %d\n", startNum_rx);
-			// printf("readyNum_rx = %d\n", readyNum_rx);
+			// printf("readyNum_rx = %d\n", readyNum_rx);			
 			buff_to_package(&package_rx[index_rx_write], databuff);
 			// printf("\nrx buff down:%d\n", index_rx_write);
 			index_rx_write++;

@@ -84,7 +84,12 @@ extern int buffisEmpty;
 int feedbackable;
 
 #define SENDABLE_FLAG 0xFF
-#define ONE_SEND_NUM 32
+#define ONE_SEND_NUM 1
+#define SEND_TOKEN_INIT 0
+
+int sendable;
+int send_token = SEND_TOKEN_INIT;
+pthread_mutex_t mutex_send_token;
 
 volatile bool force_quit;
 
@@ -313,24 +318,27 @@ l2fwd_main_loop_send(void)
 		 * TX burst queue drain
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
-		if (unlikely((diff_tsc > drain_tsc)))
+		if (unlikely((diff_tsc > drain_tsc)) && send_token > 0)
 		{
 			portid = 0;
 			buffer = tx_buffer[portid];
 
-			for (j = 0; j < 4; j++)
+			// for (j = 0; j < 4; j++)
+			// {
+			if (rte_ring_mc_dequeue(ring_send, e) < 0)
+				;
+			else
 			{
-				if (rte_ring_mc_dequeue(ring_send, e) < 0)
-					;
-				else
-				{
-					// print_mbuf_send(*(struct rte_mbuf **)e);
-					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
-					port_statistics[portid].tx += sent;
-					rte_pktmbuf_free(*(struct rte_mbuf **)e);
-					e = &d;
-				}
+				pthread_mutex_lock(&mutex_send_token);
+				send_token--;
+				pthread_mutex_unlock(&mutex_send_token);
+				// print_mbuf_send(*(struct rte_mbuf **)e);
+				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
+				port_statistics[portid].tx += sent;
+				rte_pktmbuf_free(*(struct rte_mbuf **)e);
+				e = &d;
 			}
+			// }
 			sent = rte_eth_tx_buffer_flush(portid, 0, buffer);
 			port_statistics[portid].tx += sent;
 
@@ -414,7 +422,7 @@ l2fwd_main_p(void)
 	int indx_seg = 0;
 
 	// int total_length = 0;
-	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * MBUFF_DATA_LENGTH);
+	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * 1);
 	data_to_be_sent[0] = SENDABLE_FLAG;
 
 	// for (cnt = 0; cnt < SEG_SIZE * DATA_LENGTH / 2; cnt++)
@@ -437,9 +445,9 @@ l2fwd_main_p(void)
 
 		// while (m == NULL)
 		// 	m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
-		if (feedbackable == 0)
-			sem_wait(&feedback_sem);
-		if (feedbackable == 1)
+		// if (feedbackable == 0)
+		// 	sem_wait(&feedback_sem);
+		if (!rte_ring_full(ring_send))
 		{
 			// data_to_be_sent[indx_seg * DATA_LENGTH] = pcnt;
 			// package(data_to_be_sent + DATA_LENGTH * indx_seg, DATA_LENGTH, m);
@@ -476,6 +484,7 @@ l2fwd_main_c(void)
 	RTE_LOG(INFO, L2FWD, "entering main loop consume on core %u\n", lcore_id);
 	int feedback_cnt = 0;
 	int indx_seg = 0;
+	int pkg_cnt = 0;
 	buffisEmpty = 1;
 
 	sem_post(&lcore_c_prepared);
@@ -488,12 +497,12 @@ l2fwd_main_c(void)
 			sem_wait(&sem_buffisEmpty);
 		if (buffisEmpty)
 		{
-			if (feedback_cnt >= ONE_SEND_NUM)
-			{
-				feedbackable = 1;
-				sem_post(&feedback_sem);
-				feedback_cnt = 0;
-			}
+			// if (feedback_cnt >= ONE_SEND_NUM)
+			// {
+			// 	feedbackable = 1;
+			// 	sem_post(&feedback_sem);
+			// 	feedback_cnt = 0;
+			// }
 			if (rte_ring_mc_dequeue(ring_receive, e) < 0)
 				;
 			//printf("!\n");
@@ -509,8 +518,12 @@ l2fwd_main_c(void)
 					buffisEmpty = 0;
 					pthread_mutex_unlock(&mutex_buffisEmpty);
 					sem_post(&sem_buffisnotEmpty);
+					printf("DPDK_pkg_cnt:%d\n", pkg_cnt++);
 				}
-				feedback_cnt++;
+				// feedback_cnt++;
+				pthread_mutex_lock(&mutex_send_token);
+				send_token++;
+				pthread_mutex_unlock(&mutex_send_token);
 				rte_pktmbuf_free(*(struct rte_mbuf **)e);
 			}
 		}
