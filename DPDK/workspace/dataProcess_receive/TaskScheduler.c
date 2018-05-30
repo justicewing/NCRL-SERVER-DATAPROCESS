@@ -881,9 +881,10 @@ void TaskScheduler_rx(void *arg)
 	sem_wait(&rx_buff_prepared);
 
 	// omp_set_num_threads(1);
+	sem_wait(&cache_rx);
 	if (TIME_EN == 1)
 		gettimeofday(&rx_begin, NULL); //--------------------rx
-	sem_wait(&cache_rx);
+
 	static int cnt = 0;
 	while (!force_quit)
 	{
