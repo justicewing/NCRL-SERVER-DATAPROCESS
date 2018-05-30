@@ -33,10 +33,11 @@ void derm_crc(void *arg)
 			derm_crc_args.cb_tdec[i] = -64;
 	}
 
+	for (int i = 0; i < 32; i++)
+		printf("cb_crc[%d]:%d\n", i, derm_crc_args.cb_tdec[i]);
+
 	//decode
 	srslte_tdec_run_all(derm_crc_args.tdec, derm_crc_args.cb_tdec, derm_crc_args.cb_crc, derm_crc_args.nof_iterations, derm_crc_args.Kr);
-	for (int i = 0; i < 32; i++)
-		printf("cb_crc[%d]:%d\n", i, derm_crc_args.cb_crc[i]);
 
 	//crc
 	int c = derm_crc_args.conindex / 8;
