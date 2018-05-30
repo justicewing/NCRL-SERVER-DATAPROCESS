@@ -1517,6 +1517,7 @@ void Rx_buff(void *arg)
 			buffisEmpty = 1;
 			pthread_mutex_unlock(&mutex_buffisEmpty);
 			sem_post(&sem_buffisEmpty);
+			break;
 		}
 	}
 	sem_post(&cache_rx);

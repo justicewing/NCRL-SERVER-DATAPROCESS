@@ -1445,6 +1445,7 @@ void Rx_buff(void *arg)
 			pthread_mutex_lock(&mutex_buffisEmpty);
 			buffisEmpty = 1;
 			pthread_mutex_unlock(&mutex_buffisEmpty);
+			break;
 		}
 	}
 	sem_post(&rx_can_be_destroyed);

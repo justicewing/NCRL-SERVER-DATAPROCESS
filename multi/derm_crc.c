@@ -33,13 +33,20 @@ void derm_crc(void *arg)
 			derm_crc_args.cb_tdec[i] = -64;
 	}
 
+	FILE *fp = fopen("derm.txt", "a");
 	for (int i = 0; i < 32; i++)
-		printf("cb_crc[%d]:%d\n", i, derm_crc_args.cb_tdec[i]);
+	{
+		fprintf(fp, "LLRD_Package[%d]:%d\n", i, derm_crc_args.LLRD_Package[i]);
+		fprintf(fp, "tdec[%d]:%d\n", i, derm_crc_args.cb_tdec[i]);
+	}
+	fprintf(fp, "symindex:%d\n", derm_crc_args.symindex);
+	fprintf(fp, "cbs_rm:%d\n", derm_crc_args.cbs_rm);
+	fprintf(fp, "detc_cb_sizes[%d]:%d\n", derm_crc_args.Kr, derm_crc_args.detc_cb_sizes[derm_crc_args.Kr]);
+	fprintf(fp, "rv_idx:%d\n", derm_crc_args.rv_idx);
+	fclose(fp);
 
 	//decode
 	srslte_tdec_run_all(derm_crc_args.tdec, derm_crc_args.cb_tdec, derm_crc_args.cb_crc, derm_crc_args.nof_iterations, derm_crc_args.Kr);
-	for (int i = 0; i < 32; i++)
-		printf("cb_crc[%d]:%d\n", i, derm_crc_args.cb_crc[i]);
 
 	//crc
 	int c = derm_crc_args.conindex / 8;
