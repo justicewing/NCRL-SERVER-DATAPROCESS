@@ -386,7 +386,7 @@ l2fwd_main_loop_receive(void)
 		// {
 		for (j = 0; j < nb_rx; j++)
 		{
-			print_mbuf_receive(pkts_burst[j]);
+			// print_mbuf_receive(pkts_burst[j]);
 			rte_ring_mp_enqueue(ring_receive, pkts_burst[j]);
 			//rte_pktmbuf_free(pkts_burst[j]);
 			package_received++;

@@ -343,8 +343,8 @@ void TaskScheduler_tx(void *arg)
 				//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
 				for (int j = 0; j < data_len_tx[k][i]; j++)
 				{
-					// data_tx[k][i][j] = rand() % 2;
-					data_tx[k][i][j] = 1;
+					data_tx[k][i][j] = rand() % 2;
+					// data_tx[k][i][j] = 1;
 										  //printf("%d",data_tx[k][i][j]);
 				}
 			}
@@ -397,8 +397,8 @@ void TaskScheduler_tx(void *arg)
 						//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
 						for (int j = 0; j < data_len_tx[n][i] / 8; j++)
 						{
-							// data_bytes_tx[n][i][j] = rand() % 256;
-							data_bytes_tx[n][i][j] = 0xFF;
+							data_bytes_tx[n][i][j] = rand() % 256;
+							// data_bytes_tx[n][i][j] = 0xFF;
 														   //printf("%d",data_tx[k][i][j]);
 						}
 						srslte_bit_unpack_vector(data_bytes_tx[n][i], data_tx[n][i], data_len_tx[n][i]);
@@ -1339,40 +1339,40 @@ int package_to_buff(struct package_t *package, uint8_t *buff)
 
 	} // printf("data done\n");
 
-	FILE *fpbuff = fopen("result_buff.txt", "a");
-	fprintf(fpbuff, "tbs:\n");
-	for (int i = 0; i < MAX_BEAM; i++)
-		fprintf(fpbuff, "%d, ", package->tbs[i]);
-	fprintf(fpbuff, "\n");
+	// FILE *fpbuff = fopen("result_buff.txt", "a");
+	// fprintf(fpbuff, "tbs:\n");
+	// for (int i = 0; i < MAX_BEAM; i++)
+	// 	fprintf(fpbuff, "%d, ", package->tbs[i]);
+	// fprintf(fpbuff, "\n");
 
-	fprintf(fpbuff, "CQI:\n");
-	for (int i = 0; i < MAX_BEAM; i++)
-		fprintf(fpbuff, "%d, ", package->CQI_index[i]);
-	fprintf(fpbuff, "\n");
+	// fprintf(fpbuff, "CQI:\n");
+	// for (int i = 0; i < MAX_BEAM; i++)
+	// 	fprintf(fpbuff, "%d, ", package->CQI_index[i]);
+	// fprintf(fpbuff, "\n");
 
-	fprintf(fpbuff, "SNR:\n");
-	fprintf(fpbuff, "%.2f\n", package->SNR);
+	// fprintf(fpbuff, "SNR:\n");
+	// fprintf(fpbuff, "%.2f\n", package->SNR);
 
-	fprintf(fpbuff, "y:\n");
-	for (int j = 0; j < 1200 * 14; j++)
-	{
-		for (int i = 0; i < MAX_BEAM; i++)
-			fprintf(fpbuff, "%.2f+%.2fi, ", package->y[j * 8 + i].real, package->y[j * 8 + i].imag);
-		fprintf(fpbuff, "\n");
-	}
+	// fprintf(fpbuff, "y:\n");
+	// for (int j = 0; j < 1200 * 14; j++)
+	// {
+	// 	for (int i = 0; i < MAX_BEAM; i++)
+	// 		fprintf(fpbuff, "%.2f+%.2fi, ", package->y[j * 8 + i].real, package->y[j * 8 + i].imag);
+	// 	fprintf(fpbuff, "\n");
+	// }
 
-	fprintf(fpbuff, "\n");
+	// fprintf(fpbuff, "\n");
 
-	fprintf(fpbuff, "data:\n");
-	for (int j = 0; j < 1200 * 12 * 6; j++)
-	{
-		for (int i = 0; i < MAX_BEAM; i++)
-			fprintf(fpbuff, "%d, ", package->data[i][j]);
-		fprintf(fpbuff, "\n");
-	}
-	fprintf(fpbuff, "\n");
-	fprintf(fpbuff, "\n");
-	fclose(fpbuff);
+	// fprintf(fpbuff, "data:\n");
+	// for (int j = 0; j < 1200 * 12 * 6; j++)
+	// {
+	// 	for (int i = 0; i < MAX_BEAM; i++)
+	// 		fprintf(fpbuff, "%d, ", package->data[i][j]);
+	// 	fprintf(fpbuff, "\n");
+	// }
+	// fprintf(fpbuff, "\n");
+	// fprintf(fpbuff, "\n");
+	// fclose(fpbuff);
 
 	return buff_length;
 }

@@ -325,7 +325,7 @@ l2fwd_main_loop_send(void)
 					;
 				else
 				{
-					print_mbuf_send(*(struct rte_mbuf **)e);
+					// print_mbuf_send(*(struct rte_mbuf **)e);
 					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
 					port_statistics[portid].tx += sent;
 					rte_pktmbuf_free(*(struct rte_mbuf **)e);
@@ -464,7 +464,6 @@ l2fwd_main_p(void)
 				pthread_mutex_lock(&mutex_buffisEmpty);
 				buffisEmpty = 1;
 				pthread_mutex_unlock(&mutex_buffisEmpty);
-				break;
 			}
 
 			sendable_cnt++;

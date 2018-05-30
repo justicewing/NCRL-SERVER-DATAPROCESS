@@ -341,8 +341,8 @@ void TaskScheduler_tx(void *arg)
 				//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
 				for (int j = 0; j < data_len_tx[k][i]; j++)
 				{
-					// data_tx[k][i][j] = rand() % 2;
-					data_tx[k][i][j] = 1;
+					data_tx[k][i][j] = rand() % 2;
+					// data_tx[k][i][j] = 1;
 					//printf("%d",data_tx[k][i][j]);
 				}
 			}
@@ -396,8 +396,8 @@ void TaskScheduler_tx(void *arg)
 						//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
 						for (int j = 0; j < data_len_tx[n][i] / 8; j++)
 						{
-							// data_bytes_tx[n][i][j] = rand() % 256;
-							data_bytes_tx[n][i][j] = 0xFF;
+							data_bytes_tx[n][i][j] = rand() % 256;
+							// data_bytes_tx[n][i][j] = 0xFF;
 							//printf("%d",data_tx[k][i][j]);
 						}
 						srslte_bit_unpack_vector(data_bytes_tx[n][i], data_tx[n][i], data_len_tx[n][i]);
@@ -965,40 +965,40 @@ void TaskScheduler_rx(void *arg)
 				//printf("\nrx%d get package %d", n, index_tx_write);
 				//if (index_rx_read != 0)
 				//{
-				FILE *fpbuff = fopen("package.txt", "a");
-				fprintf(fpbuff, "tbs:\n");
-				for (int i = 0; i < MAX_BEAM; i++)
-					fprintf(fpbuff, "%d, ", package_rx[index_rx_read].tbs[i]);
-				fprintf(fpbuff, "\n");
+				// FILE *fpbuff = fopen("package.txt", "a");
+				// fprintf(fpbuff, "tbs:\n");
+				// for (int i = 0; i < MAX_BEAM; i++)
+				// 	fprintf(fpbuff, "%d, ", package_rx[index_rx_read].tbs[i]);
+				// fprintf(fpbuff, "\n");
 
-				fprintf(fpbuff, "CQI:\n");
-				for (int i = 0; i < MAX_BEAM; i++)
-					fprintf(fpbuff, "%d, ", package_rx[index_rx_read].CQI_index[i]);
-				fprintf(fpbuff, "\n");
+				// fprintf(fpbuff, "CQI:\n");
+				// for (int i = 0; i < MAX_BEAM; i++)
+				// 	fprintf(fpbuff, "%d, ", package_rx[index_rx_read].CQI_index[i]);
+				// fprintf(fpbuff, "\n");
 
-				fprintf(fpbuff, "SNR:\n");
-				fprintf(fpbuff, "%.2f\n", package_rx[index_rx_read].SNR);
+				// fprintf(fpbuff, "SNR:\n");
+				// fprintf(fpbuff, "%.2f\n", package_rx[index_rx_read].SNR);
 
-				fprintf(fpbuff, "y:\n");
-				for (int j = 0; j < 1200 * 14; j++)
-				{
-					for (int i = 0; i < MAX_BEAM; i++)
-						fprintf(fpbuff, "%.2f+%.2fi, ", package_rx[index_rx_read].y[j * 8 + i].real, package_rx[index_rx_read].y[j * 8 + i].imag);
-					fprintf(fpbuff, "\n");
-				}
+				// fprintf(fpbuff, "y:\n");
+				// for (int j = 0; j < 1200 * 14; j++)
+				// {
+				// 	for (int i = 0; i < MAX_BEAM; i++)
+				// 		fprintf(fpbuff, "%.2f+%.2fi, ", package_rx[index_rx_read].y[j * 8 + i].real, package_rx[index_rx_read].y[j * 8 + i].imag);
+				// 	fprintf(fpbuff, "\n");
+				// }
 
-				fprintf(fpbuff, "\n");
+				// fprintf(fpbuff, "\n");
 
-				fprintf(fpbuff, "data:\n");
-				for (int j = 0; j < 1200 * 12 * 6; j++)
-				{
-					for (int i = 0; i < MAX_BEAM; i++)
-						fprintf(fpbuff, "%d, ", package_rx[index_rx_read].data[i][j]);
-					fprintf(fpbuff, "\n");
-				}
-				fprintf(fpbuff, "\n");
-				fprintf(fpbuff, "\n");
-				fclose(fpbuff);
+				// fprintf(fpbuff, "data:\n");
+				// for (int j = 0; j < 1200 * 12 * 6; j++)
+				// {
+				// 	for (int i = 0; i < MAX_BEAM; i++)
+				// 		fprintf(fpbuff, "%d, ", package_rx[index_rx_read].data[i][j]);
+				// 	fprintf(fpbuff, "\n");
+				// }
+				// fprintf(fpbuff, "\n");
+				// fprintf(fpbuff, "\n");
+				// fclose(fpbuff);
 				pthread_mutex_lock(&mutex_readyNum_rx);
 				readyNum_rx--;
 				pthread_mutex_unlock(&mutex_readyNum_rx);
@@ -1078,16 +1078,16 @@ void TaskScheduler_rx(void *arg)
 						derm_crc_args[jp].ServiceEN_index = n * TASK_NUM_RX + 2;
 						derm_crc_args[jp].ServiceEN_rx = ServiceEN_rx;
 
-						FILE *fpl = fopen("llrd.txt", "a");
-						fprintf(fpl, "llrd:\n");
-						for (int k = 0; k < CARRIER_NUM * SYMBOL_NUM * 6; k++)
-						{
-							for (int l = 0; l < MAX_BEAM; l++)
-								fprintf(fpl, "%d, ", LLRD_Package[n][k * 8 + l]);
-							fprintf(fpl, "\n");
-						}
-						fprintf(fpl, "\n");
-						fclose(fpl);
+						// FILE *fpl = fopen("llrd.txt", "a");
+						// fprintf(fpl, "llrd:\n");
+						// for (int k = 0; k < CARRIER_NUM * SYMBOL_NUM * 6; k++)
+						// {
+						// 	for (int l = 0; l < MAX_BEAM; l++)
+						// 		fprintf(fpl, "%d, ", LLRD_Package[n][k * 8 + l]);
+						// 	fprintf(fpl, "\n");
+						// }
+						// fprintf(fpl, "\n");
+						// fclose(fpl);
 
 						pool_add_task(derm_crc, (void *)&derm_crc_args[jp], 3);
 						// printf("r = %d\n", r);
@@ -1119,16 +1119,16 @@ void TaskScheduler_rx(void *arg)
 					crc_check_args[j].subframeIndex = n;
 					crc_check_args[j].BERsignal = BERsignal;
 
-					FILE *fpdb = fopen("datab.txt", "a");
-					fprintf(fpdb, "datab:\n");
-					for (int k = 0; k < (MAX_DATA_LEN_RX + CRC_LENGTH) / 8; k++)
-					{
-						for (int l = 0; l < MAX_BEAM; l++)
-							fprintf(fpdb, "%d, ", data_bytes_rx[n][i][k]);
-						fprintf(fpdb, "\n");
-					}
-					fprintf(fpdb, "\n");
-					fclose(fpdb);
+					// FILE *fpdb = fopen("datab.txt", "a");
+					// fprintf(fpdb, "datab:\n");
+					// for (int k = 0; k < (MAX_DATA_LEN_RX + CRC_LENGTH) / 8; k++)
+					// {
+					// 	for (int l = 0; l < MAX_BEAM; l++)
+					// 		fprintf(fpdb, "%d, ", data_bytes_rx[n][i][k]);
+					// 	fprintf(fpdb, "\n");
+					// }
+					// fprintf(fpdb, "\n");
+					// fclose(fpdb);
 
 					pool_add_task(crc_check, (void *)&crc_check_args[j], 3);
 				}
@@ -1445,7 +1445,7 @@ void Rx_buff(void *arg)
 			pthread_mutex_lock(&mutex_buffisEmpty);
 			buffisEmpty = 1;
 			pthread_mutex_unlock(&mutex_buffisEmpty);
-			break;
+			// break;
 		}
 	}
 	sem_post(&rx_can_be_destroyed);
