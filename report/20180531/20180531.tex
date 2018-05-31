@@ -92,7 +92,7 @@
 \end{figure}
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .6\textwidth]{tdec_error.png}
+	\includegraphics[width = .8\textwidth]{tdec_error.png}
 	\caption{速率匹配错误}
 \end{figure}
 \begin{lstlisting}
@@ -101,7 +101,7 @@ void srslte_rm_turbo_gentables();
 \subsection{实现结果}
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .6\textwidth]{result1.png}
+	\includegraphics[width = \textwidth]{result1.png}
 	\caption{接收端服务器显示}
 \end{figure}
 
@@ -144,11 +144,16 @@ void srslte_rm_turbo_gentables();
 %===========第三节=================
 \newpage
 \section{仍存在的问题}
-1. 内存溢出错误
+1. 内存溢出和丢包问题
 \begin{figure}[H]
 	\centering
 	\includegraphics[width = .8\textwidth]{receive_res_dumped.png}
 	\caption{内存溢出报错}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{err_fbp.png}
+	\caption{丢包错误}
 \end{figure}
 2. 拷贝过程的简化
 \begin{figure}[H]

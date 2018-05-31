@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99999 (TeX Live 2018/W32TeX) (preloaded format=xelatex 2018.5.4)  31 MAY 2018 13:34
+This is XeTeX, Version 3.14159265-2.6-0.99999 (TeX Live 2018/W32TeX) (preloaded format=xelatex 2018.5.4)  31 MAY 2018 13:53
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1410,17 +1410,19 @@ File: frame_token.pdf Graphic file (type pdf)
  [4]
 File: receive_res_dumped.png Graphic file (type bmp)
 <receive_res_dumped.png>
+File: err_fbp.png Graphic file (type bmp)
+<err_fbp.png>
 File: frame_sys_copy.pdf Graphic file (type pdf)
 <use frame_sys_copy.pdf>
 
-[5] (./20180531.aux) ) 
+[5] [6] (./20180531.aux) ) 
 Here is how much of TeX's memory you used:
- 17466 strings out of 492970
- 377927 string characters out of 6137299
+ 17470 strings out of 492970
+ 377984 string characters out of 6137299
  456148 words of memory out of 5000000
- 21248 multiletter control sequences out of 15000+600000
+ 21251 multiletter control sequences out of 15000+600000
  538054 words of font info for 77 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  53i,8n,68p,10501b,935s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on 20180531.pdf (5 pages).
+Output written on 20180531.pdf (6 pages).
