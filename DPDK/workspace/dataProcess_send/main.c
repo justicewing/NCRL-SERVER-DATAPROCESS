@@ -94,7 +94,7 @@ extern pthread_mutex_t mutex_buff_empty;
 extern int buff_empty;
 
 #define SENDABLE_FLAG 0xFF
-#define SEND_TOKEN_INIT 4
+#define SEND_TOKEN_INIT 1
 
 int sendable;
 int send_token = SEND_TOKEN_INIT;
