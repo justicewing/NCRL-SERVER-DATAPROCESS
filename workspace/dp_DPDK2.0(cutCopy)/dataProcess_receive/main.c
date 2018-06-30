@@ -236,8 +236,6 @@ int package(uint8_t *data, int length, struct rte_mbuf *m)
 	int cnt = 0;
 
 	rte_pktmbuf_append(m, length + 16);
-	// for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
-	// 	*adcnt = 0x00;
 	adcnt = (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *);
 	for (int i = 0; i < 16; i++)
 	{
@@ -251,8 +249,87 @@ int package(uint8_t *data, int length, struct rte_mbuf *m)
 		adcnt++;
 	}
 
-	// for (adcnt = rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt < (uint8_t *)m->buf_addr + m->buf_len; adcnt++)
-	// 	*adcnt = 0x00;
+	return 0;
+}
+
+/* 从Tx包缓冲区直接打包 */
+int package(struct package_t *pkg_tx, int8_t type, int16_t num, int16_t length, struct rte_mbuf *m)
+{
+
+	static const int length_prefix = 16;
+	static const int length_type = sizeof(type);
+	static const int length_num = sizeof(num);
+	static const int length_length = sizeof(length);
+
+	int length_mbuf = length + length_prefix + length_type + length_num + length_length;
+	rte_pktmbuf_append(m, length_mbuf);
+	uint8_t *adcnt = (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *);
+
+	// 填写前缀
+	for (int i = 0; i < 16; i++)
+	{
+		*adcnt = 0xFF;
+		adcnt++;
+	}
+
+	// 填写包信息
+	*adcnt = type;
+	adcnt++;
+	*adcnt = num >> 8;
+	adcnt++;
+	*adcnt = (int8_t)num;
+	adcnt++;
+	*adcnt = length >> 8;
+	adcnt++;
+	*adcnt = (int8_t)length;
+	adcnt++;
+
+	if (type == 0)
+	{
+		uint8_t *tbs_p = (uint8_t *)(pkg_tx->tbs);
+		for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
+		{
+			*adcnt = *tbs_p;
+			adcnt++;
+			tbs_p++;
+		}
+
+		uint8_t *cqi_p = (uint8_t *)(pkg_tx->CQI_index);
+		for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
+		{
+			*adcnt = *cqi_p;
+			adcnt++;
+			cqi_p++;
+		}
+
+		uint8_t *snr_p = (uint8_t *)(&(pkg_tx->SNR));
+		for (int i = 0; i < sizeof(float); i++)
+		{
+			*adcnt = *snr_p;
+			adcnt++;
+			snr_p++;
+		}
+		return 0;
+	}
+	else if (type == 1)
+	{
+		int8_t *data = (int8_t *)pkg_tx->y + length * num;
+		for (int cnt = 0; cnt < length; cnt++)
+		{
+			*adcnt = data[cnt];
+			adcnt++;
+		}
+	}
+	else
+	{
+		int num_data = type - 2;
+		int8_t *data = (int8_t *)pkg_tx->data[num_data] + length * num;
+		for (int cnt = 0; cnt < length; cnt++)
+		{
+			*adcnt = data[cnt];
+			adcnt++;
+		}
+	}
 
 	return 0;
 }
@@ -408,7 +485,7 @@ l2fwd_main_loop_receive(void)
 }
 
 static void
-l2fwd_main_p(void)
+l2fwd_main_producer(void)
 {
 	unsigned lcore_id;
 	lcore_id = rte_lcore_id();
@@ -427,6 +504,10 @@ l2fwd_main_p(void)
 	uint8_t flag = SENDABLE_FLAG;
 	struct rte_mbuf *m;
 
+	int8_t type;
+	int16_t num;
+	int16_t length;
+
 	sem_post(&lcore_p_prepared);
 	sem_wait(&lcore_send_prepared);
 
@@ -440,6 +521,7 @@ l2fwd_main_p(void)
 				printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 				continue;
 			}
+
 			package(data_to_be_sent, 8, m);
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
 				; //printf("p!\n");
@@ -452,7 +534,7 @@ l2fwd_main_p(void)
 	printf("入列的包个数%d\n", packet_num_threw_in_ring);
 }
 static void
-l2fwd_main_c(void)
+l2fwd_main_consumer(void)
 {
 	void *d = NULL;
 	void **e = &d;
@@ -516,12 +598,12 @@ l2fwd_launch_one_lcore_receive(__attribute__((unused)) void *dummy)
 }
 l2fwd_launch_one_lcore_p(__attribute__((unused)) void *dummy)
 {
-	l2fwd_main_p();
+	l2fwd_main_producer();
 	return 0;
 }
 l2fwd_launch_one_lcore_c(__attribute__((unused)) void *dummy)
 {
-	l2fwd_main_c();
+	l2fwd_main_consumer();
 	return 0;
 }
 
