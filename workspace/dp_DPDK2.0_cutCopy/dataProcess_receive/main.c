@@ -80,6 +80,12 @@ sem_t lcore_c_prepared;
 extern uint8_t *databuff;
 extern pthread_mutex_t mutex_buff_empty;
 extern int buff_empty;
+extern int index_rx_write;
+extern struct package_t package_rx[PACK_CACHE];
+extern pthread_mutex_t mutex_readyNum_rx;
+extern pthread_mutex_t mutex_startNum_rx;
+extern int readyNum_rx;
+extern int startNum_rx;
 
 int feedbackable;
 
@@ -95,7 +101,7 @@ volatile bool force_quit;
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
 #define NB_MBUF 8192
-#define MBUFF_DATA_LENGTH 1024
+#define MBUFF_DATA_LENGTH 1200
 #define SEG_SIZE 1792
 
 uint8_t *data_to_be_sent;
@@ -252,15 +258,77 @@ int package(uint8_t *data, int length, struct rte_mbuf *m)
 	return 0;
 }
 
-int depackage(uint8_t *data, int length, uint8_t *adcnt)
+// int depackage(uint8_t *data, int length, uint8_t *adcnt)
+// {
+// 	int cnt = 0;
+// 	adcnt += 16;
+
+// 	for (cnt = 0; cnt < length; cnt++)
+// 	{
+// 		data[cnt] = *adcnt;
+// 		adcnt++;
+// 	}
+// 	return 0;
+// }
+
+/* 直接卸载到Rx缓冲区 */
+int depackage(struct package_t *pkg_rx, uint8_t *adcnt)
 {
-	int cnt = 0;
 	adcnt += 16;
-	for (cnt = 0; cnt < length; cnt++)
+
+	int8_t type = *adcnt;
+	adcnt++;
+	int16_t num = *adcnt << 8 + *(adcnt + 1);
+	adcnt += 2;
+	int16_t length = *adcnt << 8 + *(adcnt + 1);
+	adcnt += 2;
+
+	if (type == 0)
 	{
-		data[cnt] = *adcnt;
-		adcnt++;
+		uint8_t *tbs_p = (uint8_t *)(pkg_rx->tbs);
+		for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
+		{
+			*tbs_p = *adcnt;
+			adcnt++;
+			tbs_p++;
+		}
+
+		uint8_t *cqi_p = (uint8_t *)(pkg_rx->CQI_index);
+		for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
+		{
+			*cqi_p = *adcnt;
+			adcnt++;
+			cqi_p++;
+		}
+
+		uint8_t *snr_p = (uint8_t *)(&(pkg_rx->SNR));
+		for (int i = 0; i < sizeof(float); i++)
+		{
+			*snr_p = *adcnt;
+			adcnt++;
+			snr_p++;
+		}
 	}
+	else if (type == 1)
+	{
+		int8_t *data = (int8_t *)pkg_rx->y + length * num;
+		for (int cnt = 0; cnt < length; cnt++)
+		{
+			data[cnt] = *adcnt;
+			adcnt++;
+		}
+	}
+	else if (type >= 2 && type < 2 + MAX_BEAM)
+	{
+		int num_data = type - 2;
+		int8_t *data = (int8_t *)pkg_rx->data[num_data] + length * num;
+		for (int cnt = 0; cnt < length; cnt++)
+		{
+			data[cnt] = *adcnt;
+			adcnt++;
+		}
+	}
+
 	return 0;
 }
 
@@ -389,7 +457,7 @@ l2fwd_main_loop_receive(void)
 		// {
 		for (j = 0; j < nb_rx; j++)
 		{
-			// print_mbuf_receive(pkts_burst[j]);
+			print_mbuf_receive(pkts_burst[j]);
 			rte_ring_mp_enqueue(ring_receive, pkts_burst[j]);
 			//rte_pktmbuf_free(pkts_burst[j]);
 			package_received++;
@@ -479,17 +547,31 @@ l2fwd_main_consumer(void)
 			else
 			{
 				adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
-				depackage(databuff + MBUFF_DATA_LENGTH * indx_seg, MBUFF_DATA_LENGTH, adcnt);
-				indx_seg++;
-				if (indx_seg >= SEG_SIZE)
-				{
-					indx_seg = 0;
-					pthread_mutex_lock(&mutex_buff_empty);
-					buff_empty = 0;
-					pthread_mutex_unlock(&mutex_buff_empty);
-					sem_post(&sem_buff_full);
-					printf("DPDK_pkg_cnt:%d\n", pkg_cnt++);
-				}
+
+				pthread_mutex_lock(&mutex_startNum_rx);
+				startNum_rx++;
+				pthread_mutex_unlock(&mutex_startNum_rx);
+
+				depackage(&package_rx[index_rx_write], adcnt);
+
+				index_rx_write++;
+				if (index_rx_write >= PACK_CACHE)
+					index_rx_write = 0;
+				pthread_mutex_lock(&mutex_readyNum_rx);
+				readyNum_rx++;
+				pthread_mutex_unlock(&mutex_readyNum_rx);
+				sem_post(&cache_rx);
+
+				// indx_seg++;
+				// if (indx_seg >= SEG_SIZE)
+				// {
+				// 	indx_seg = 0;
+				// 	pthread_mutex_lock(&mutex_buff_empty);
+				// 	buff_empty = 0;
+				// 	pthread_mutex_unlock(&mutex_buff_empty);
+				// 	sem_post(&sem_buff_full);
+				// 	printf("DPDK_pkg_cnt:%d\n", pkg_cnt++);
+				// }
 				pthread_mutex_lock(&mutex_send_token);
 				send_token++;
 				pthread_mutex_unlock(&mutex_send_token);
@@ -499,7 +581,8 @@ l2fwd_main_consumer(void)
 	}
 	// 结束后叫醒
 	// sem_post(&feedback_sem);
-	sem_post(&sem_buff_full);
+	// sem_post(&sem_buff_full);
+	sem_post(&cache_rx);
 }
 
 static int
@@ -769,8 +852,8 @@ int main(int argc, char **argv)
 	printf("creat pool 1...\n");
 	pool_init(1, threadNum_rx, 3);
 	printf("creat pool 3...\n");
-	pool_init(1 + threadNum_rx, 1, 5);
-	printf("creat pool 5...\n");
+	// pool_init(1 + threadNum_rx, 1, 5);
+	// printf("creat pool 5...\n");
 
 	/* 添加发送端主任务 */
 	// pool_add_task(TaskScheduler_tx, NULL, 0);
@@ -782,8 +865,8 @@ int main(int argc, char **argv)
 	// pool_add_task(Tx_buff, NULL, 4);
 	// printf("add Tx Buff to pool 4...\n");
 	/* 添加发送端缓存任务 */
-	pool_add_task(Rx_buff, NULL, 5);
-	printf("add Rx Buff to pool 5...\n");
+	// pool_add_task(Rx_buff, NULL, 5);
+	// printf("add Rx Buff to pool 5...\n");
 
 	ret = 0;
 	/* launch tasks on lcore */
@@ -812,18 +895,18 @@ int main(int argc, char **argv)
 	pool_destroy(1);
 	// sem_wait(&tx_buff_can_be_destroyed);
 	// pool_destroy(4);
-	sem_wait(&rx_buff_can_be_destroyed);
-	pool_destroy(5);
+	// sem_wait(&rx_buff_can_be_destroyed);
+	// pool_destroy(5);
 
 	/* 销毁信号量*/
 	// sem_destroy(&tx_can_be_destroyed);
 	sem_destroy(&rx_can_be_destroyed);
 	// sem_destroy(&tx_buff_can_be_destroyed);
-	sem_destroy(&rx_buff_can_be_destroyed);
+	// sem_destroy(&rx_buff_can_be_destroyed);
 	// sem_destroy(&tx_prepared);
 	sem_destroy(&rx_prepared);
 	// sem_destroy(&tx_buff_prepared);
-	sem_destroy(&rx_buff_prepared);
+	// sem_destroy(&rx_buff_prepared);
 	// sem_destroy(&cache_tx);
 	sem_destroy(&cache_rx);
 	sem_destroy(&sem_buff_full);

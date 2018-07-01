@@ -93,7 +93,11 @@ extern uint8_t *databuff;
 extern pthread_mutex_t mutex_buff_empty;
 extern int buff_empty;
 extern int readyNum_tx;
+extern int startNum_tx;
 extern int index_tx_read;
+extern pthread_mutex_t mutex_readyNum_tx;
+extern pthread_mutex_t mutex_startNum_tx;
+extern struct package_t package_tx[PACK_CACHE];
 
 #define SENDABLE_FLAG 0xFF
 #define SEND_TOKEN_INIT 1
@@ -108,7 +112,7 @@ volatile bool force_quit;
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
 #define NB_MBUF 8192
-#define MBUFF_DATA_LENGTH 1024
+#define MBUFF_DATA_LENGTH 1200
 #define SEG_SIZE 1792
 
 // uint8_t *data_to_be_sent;
@@ -324,7 +328,6 @@ int package(struct package_t *pkg_tx, int8_t type, int16_t num, int16_t length, 
 			adcnt++;
 			snr_p++;
 		}
-		return 0;
 	}
 	else if (type == 1)
 	{
@@ -335,7 +338,7 @@ int package(struct package_t *pkg_tx, int8_t type, int16_t num, int16_t length, 
 			adcnt++;
 		}
 	}
-	else
+	else if (type >= 2 && type < 2 + MAX_BEAM)
 	{
 		int num_data = type - 2;
 		int8_t *data = (int8_t *)pkg_tx->data[num_data] + length * num;
@@ -413,7 +416,7 @@ l2fwd_main_loop_send(void)
 				pthread_mutex_lock(&mutex_send_token);
 				send_token--;
 				pthread_mutex_unlock(&mutex_send_token);
-				// print_mbuf_send(*(struct rte_mbuf **)e);
+				print_mbuf_send(*(struct rte_mbuf **)e);
 				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
 				port_statistics[portid].tx += sent;
 				rte_pktmbuf_free(*(struct rte_mbuf **)e);
@@ -573,15 +576,15 @@ l2fwd_main_producer(void)
 
 			packet_num_threw_in_ring++;
 
-			// databuff定位
-			indx_seg++;
-			if (indx_seg >= SEG_SIZE)
-			{
-				indx_seg = 0;
-				pthread_mutex_lock(&mutex_buff_empty);
-				buff_empty = 1;
-				pthread_mutex_unlock(&mutex_buff_empty);
-			}
+			// // databuff定位
+			// indx_seg++;
+			// if (indx_seg >= SEG_SIZE)
+			// {
+			// 	indx_seg = 0;
+			// 	pthread_mutex_lock(&mutex_buff_empty);
+			// 	buff_empty = 1;
+			// 	pthread_mutex_unlock(&mutex_buff_empty);
+			// }
 		}
 	}
 	printf("入列的包个数%d\n", packet_num_threw_in_ring);
