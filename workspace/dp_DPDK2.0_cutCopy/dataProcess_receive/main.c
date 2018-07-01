@@ -40,19 +40,6 @@
 #include <rte_ethdev.h>
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
-
-#include <stdio.h>
-#include <string.h>
-#include <strings.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <assert.h>
-#include <unistd.h>
-#include <errno.h>
-#include <semaphore.h>
-#include <math.h>
-#include <time.h>
-#include <complex.h>
 #include "mkl.h"
 #include "thread_pool.h"
 #include "srslte/fec/cbsegm.h"
@@ -80,27 +67,29 @@ sem_t tx_buff_prepared;
 sem_t rx_buff_prepared;
 sem_t cache_tx;
 sem_t cache_rx;
-sem_t buff_full;
+sem_t sem_buff_full;
+sem_t sem_buff_empty;
 
 /* 声明信号量 */
 sem_t lcore_send_prepared;
 sem_t lcore_receive_prepared;
 sem_t lcore_p_prepared;
 sem_t lcore_c_prepared;
-sem_t sendable_sem;
+// sem_t feedback_sem;
 
 extern uint8_t *databuff;
 extern pthread_mutex_t mutex_buff_empty;
 extern int buff_empty;
 
+int feedbackable;
+
 #define SENDABLE_FLAG 0xFF
-#define SEND_TOKEN_INIT 1
+#define SEND_TOKEN_INIT 0
 
 int sendable;
 int send_token = SEND_TOKEN_INIT;
 pthread_mutex_t mutex_send_token;
 
-// static volatile bool force_quit;	// 不能在其他编译单元内使用
 volatile bool force_quit;
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
@@ -109,7 +98,7 @@ volatile bool force_quit;
 #define MBUFF_DATA_LENGTH 1024
 #define SEG_SIZE 1792
 
-// uint8_t *data_to_be_sent;
+uint8_t *data_to_be_sent;
 
 #define MAX_PKT_BURST 32
 #define BURST_TX_DRAIN_US 4 /* TX drain every ~100us */
@@ -241,110 +230,37 @@ print_mbuf_receive(struct rte_mbuf *m)
 	fclose(fp);
 }
 
-// int package(unsigned char *data, int length, struct rte_mbuf *m)
-// {
-// 	uint8_t *adcnt = NULL;
-// 	int cnt = 0;
-
-// 	rte_pktmbuf_append(m, length + 16);
-// 	for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
-// 		*adcnt = 0x00;
-
-// 	for (int i = 0; i < 16; i++)
-// 	{
-// 		*adcnt = 0xFF;
-// 		adcnt++;
-// 	}
-
-// 	for (cnt = 0; cnt < length; cnt++)
-// 	{
-// 		*adcnt = data[cnt];
-// 		*adcnt++;
-// 	}
-
-// 	return 0;
-// }
-
-
-/* 从Tx包缓冲区直接打包 */
-int package(struct package_t *pkg_tx, int8_t type, int16_t num, int16_t length, struct rte_mbuf *m)
+int package(uint8_t *data, int length, struct rte_mbuf *m)
 {
+	uint8_t *adcnt = NULL;
+	int cnt = 0;
 
-	static const int length_prefix = 16;
-	static const int length_type = sizeof(type);
-	static const int length_num = sizeof(num);
-	static const int length_length = sizeof(length);
-
-	int length_mbuf = length + length_prefix + length_type + length_num + length_length;
-	rte_pktmbuf_append(m, length_mbuf);
-	uint8_t *adcnt = (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *);
-
-	// 填写前缀
+	rte_pktmbuf_append(m, length + 16);
+	adcnt = (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *);
 	for (int i = 0; i < 16; i++)
 	{
 		*adcnt = 0xFF;
 		adcnt++;
 	}
 
-	// 填写包信息
-	*adcnt = type;
-	adcnt++;
-	*adcnt = num >> 8;
-	adcnt++;
-	*adcnt = (int8_t)num;
-	adcnt++;
-	*adcnt = length >> 8;
-	adcnt++;
-	*adcnt = (int8_t)length;
-	adcnt++;
-
-	if (type == 0)
+	for (cnt = 0; cnt < length; cnt++)
 	{
-		uint8_t *tbs_p = (uint8_t *)(pkg_tx->tbs);
-		for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
-		{
-			*adcnt = *tbs_p;
-			adcnt++;
-			tbs_p++;
-		}
-
-		uint8_t *cqi_p = (uint8_t *)(pkg_tx->CQI_index);
-		for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
-		{
-			*adcnt = *cqi_p;
-			adcnt++;
-			cqi_p++;
-		}
-
-		uint8_t *snr_p = (uint8_t *)(&(pkg_tx->SNR));
-		for (int i = 0; i < sizeof(float); i++)
-		{
-			*adcnt = *snr_p;
-			adcnt++;
-			snr_p++;
-		}
-		return 0;
-	}
-	else if (type == 1)
-	{
-		int8_t *data = (int8_t *)pkg_tx->y + length * num;
-		for (int cnt = 0; cnt < length; cnt++)
-		{
-			*adcnt = data[cnt];
-			adcnt++;
-		}
-	}
-	else
-	{
-		int num_data = type - 2;
-		int8_t *data = (int8_t *)pkg_tx->data[num_data] + length * num;
-		for (int cnt = 0; cnt < length; cnt++)
-		{
-			*adcnt = data[cnt];
-			adcnt++;
-		}
+		*adcnt = data[cnt];
+		adcnt++;
 	}
 
+	return 0;
+}
+
+int depackage(uint8_t *data, int length, uint8_t *adcnt)
+{
+	int cnt = 0;
+	adcnt += 16;
+	for (cnt = 0; cnt < length; cnt++)
+	{
+		data[cnt] = *adcnt;
+		adcnt++;
+	}
 	return 0;
 }
 
@@ -398,7 +314,7 @@ l2fwd_main_loop_send(void)
 		 * TX burst queue drain
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
-		if (unlikely((diff_tsc > drain_tsc)) && (send_token > 0))
+		if (unlikely((diff_tsc > drain_tsc)) && send_token > 0)
 		{
 			portid = 0;
 			buffer = tx_buffer[portid];
@@ -434,11 +350,14 @@ l2fwd_main_loop_send(void)
 				{
 					/* do this only on master core */
 					running_second += 1;
-					// print_stats();
-					// printf("%d\n", running_second);
+					print_stats();
+					printf("%d\n", running_second);
 					send_rate = (port_statistics[portid].tx * mac_length_send * 8 / running_second) / 1000000000.0;
-					// printf("send_rate= %f Gb\nreceive_rate= %f Gb\n", send_rate, receive_rated
-					// timer_tsc = 0;
+					receive_rate = (port_statistics[portid].rx * mac_length_receive * 8 / running_second) / 1000000000.0;
+					printf("send_rate= %f Gb\nreceive_rate= %f Gb\n", send_rate, receive_rate);
+					// printf("pack_err= %d\n", pack_err);
+					/* reset the timer */
+					timer_tsc = 0;
 				}
 			}
 
@@ -494,18 +413,25 @@ l2fwd_main_producer(void)
 	int cnt = 0;
 	int packet_num_threw_in_ring = 0;
 	long long int packet_num_want_to_send = 1;
+	uint16_t pcnt = 0;
 	int indx_seg = 0;
 
+	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * 1);
+	data_to_be_sent[0] = SENDABLE_FLAG;
+
+	uint8_t flag = SENDABLE_FLAG;
 	struct rte_mbuf *m;
-	int sendable_cnt = 0;
+
+	int8_t type;
+	int16_t num;
+	int16_t length;
 
 	sem_post(&lcore_p_prepared);
 	sem_wait(&lcore_send_prepared);
-	sem_wait(&tx_prepared);
 
 	while (!force_quit)
 	{
-		if ((!rte_ring_full(ring_send)) && (!buff_empty))
+		if (!rte_ring_full(ring_send))
 		{
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 			if (m == NULL)
@@ -513,23 +439,15 @@ l2fwd_main_producer(void)
 				printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 				continue;
 			}
-			package(databuff + MBUFF_DATA_LENGTH * indx_seg, MBUFF_DATA_LENGTH, m);
 
+			package(data_to_be_sent, 8, m);
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
-				;
+				; //printf("p!\n");
 
 			packet_num_threw_in_ring++;
-
-			// databuff定位
-			indx_seg++;
-			if (indx_seg >= SEG_SIZE)
-			{
-				indx_seg = 0;
-				pthread_mutex_lock(&mutex_buff_empty);
-				buff_empty = 1;
-				pthread_mutex_unlock(&mutex_buff_empty);
-			}
+			feedbackable = 0;
 		}
+		// }
 	}
 	printf("入列的包个数%d\n", packet_num_threw_in_ring);
 }
@@ -542,28 +460,46 @@ l2fwd_main_consumer(void)
 	uint8_t *adcnt = NULL;
 	lcore_id = rte_lcore_id();
 	RTE_LOG(INFO, L2FWD, "entering main loop consume on core %u\n", lcore_id);
+	int indx_seg = 0;
+	int pkg_cnt = 0;
+	buff_empty = 1;
 
 	sem_post(&lcore_c_prepared);
 	sem_wait(&lcore_receive_prepared);
+	sem_wait(&rx_prepared);
 
 	while (!force_quit)
 	{
-		if (rte_ring_mc_dequeue(ring_receive, e) < 0)
-			;
-		else
+		if (!buff_empty)
+			sem_wait(&sem_buff_empty);
+		if (buff_empty)
 		{
-			adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
-			if (*adcnt == SENDABLE_FLAG)
+			if (rte_ring_mc_dequeue(ring_receive, e) < 0)
+				;
+			else
 			{
+				adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
+				depackage(databuff + MBUFF_DATA_LENGTH * indx_seg, MBUFF_DATA_LENGTH, adcnt);
+				indx_seg++;
+				if (indx_seg >= SEG_SIZE)
+				{
+					indx_seg = 0;
+					pthread_mutex_lock(&mutex_buff_empty);
+					buff_empty = 0;
+					pthread_mutex_unlock(&mutex_buff_empty);
+					sem_post(&sem_buff_full);
+					printf("DPDK_pkg_cnt:%d\n", pkg_cnt++);
+				}
 				pthread_mutex_lock(&mutex_send_token);
 				send_token++;
 				pthread_mutex_unlock(&mutex_send_token);
+				rte_pktmbuf_free(*(struct rte_mbuf **)e);
 			}
-			rte_pktmbuf_free(*(struct rte_mbuf **)e);
 		}
 	}
 	// 结束后叫醒
-	// sem_post(&sendable_sem);
+	// sem_post(&feedback_sem);
+	sem_post(&sem_buff_full);
 }
 
 static int
@@ -578,13 +514,11 @@ l2fwd_launch_one_lcore_receive(__attribute__((unused)) void *dummy)
 	l2fwd_main_loop_receive();
 	return 0;
 }
-static int
 l2fwd_launch_one_lcore_p(__attribute__((unused)) void *dummy)
 {
 	l2fwd_main_producer();
 	return 0;
 }
-static int
 l2fwd_launch_one_lcore_c(__attribute__((unused)) void *dummy)
 {
 	l2fwd_main_consumer();
@@ -669,7 +603,7 @@ signal_handler(int signum)
 
 int main(int argc, char **argv)
 {
-	// sendable = 1;
+	feedbackable = 1;
 	int ret;
 	uint8_t nb_ports;
 	uint8_t portid;
@@ -788,11 +722,13 @@ int main(int argc, char **argv)
 
 	check_all_ports_link_status(1, 0x1);
 
+	/* for TaskScheduler */
 	/* 初始化信号量 */
 	sem_init(&lcore_send_prepared, 0, 0);
 	sem_init(&lcore_receive_prepared, 0, 0);
 	sem_init(&lcore_p_prepared, 0, 0);
 	sem_init(&lcore_c_prepared, 0, 0);
+	// sem_init(&feedback_sem, 0, 0);
 
 	/* 初始化互斥锁 */
 	pthread_mutex_init(&mutex1_tx, NULL);
@@ -801,9 +737,6 @@ int main(int argc, char **argv)
 	pthread_mutex_init(&mutex2_rx, NULL);
 	pthread_mutex_init(&mutex3_rx, NULL);
 
-	pthread_mutex_init(&mutex_send_token, NULL);
-
-	/* for TaskScheduler */
 	/* 初始化信号量 */
 	sem_init(&tx_can_be_destroyed, 0, 0);
 	sem_init(&rx_can_be_destroyed, 0, 0);
@@ -815,7 +748,8 @@ int main(int argc, char **argv)
 	sem_init(&rx_buff_prepared, 0, 0);
 	sem_init(&cache_tx, 0, 0);
 	sem_init(&cache_rx, 0, 0);
-	sem_init(&buff_full, 0, 0);
+	sem_init(&sem_buff_full, 0, 0);
+	sem_init(&sem_buff_empty, 0, 0);
 
 	/* 初始化线程池 */
 	// pool_init(0, 1, 0);
@@ -831,25 +765,25 @@ int main(int argc, char **argv)
 	// pool_init(3 + threadNum_tx + threadNum_rx, 1, 5);
 	// printf("creat pool 4...\n");
 
-	pool_init(0, 1, 0);
-	printf("creat pool 0...\n");
-	pool_init(1, threadNum_tx, 2);
-	printf("creat pool 2...\n");
-	pool_init(1 + threadNum_tx, 1, 4);
-	printf("creat pool 4...\n");
+	pool_init(0, 1, 1);
+	printf("creat pool 1...\n");
+	pool_init(1, threadNum_rx, 3);
+	printf("creat pool 3...\n");
+	pool_init(1 + threadNum_rx, 1, 5);
+	printf("creat pool 5...\n");
 
 	/* 添加发送端主任务 */
-	pool_add_task(TaskScheduler_tx, NULL, 0);
-	printf("add Tx TaskScheduler to pool 0...\n");
+	// pool_add_task(TaskScheduler_tx, NULL, 0);
+	// printf("add Tx TaskScheduler to pool 0...\n");
 	/* 添加接收端主任务 */
-	// pool_add_task(TaskScheduler_rx, NULL, 1);
-	// printf("add Rx TaskScheduler to pool 1...\n");
+	pool_add_task(TaskScheduler_rx, NULL, 1);
+	printf("add Rx TaskScheduler to pool 1...\n");
 	/* 添加发送端缓存任务 */
-	pool_add_task(Tx_buff, NULL, 4);
-	printf("add Tx Buff to pool 4...\n");
+	// pool_add_task(Tx_buff, NULL, 4);
+	// printf("add Tx Buff to pool 4...\n");
 	/* 添加发送端缓存任务 */
-	// pool_add_task(Rx_buff, NULL, 5);
-	// printf("add Rx Buff to pool 5...\n");
+	pool_add_task(Rx_buff, NULL, 5);
+	printf("add Rx Buff to pool 5...\n");
 
 	ret = 0;
 	/* launch tasks on lcore */
@@ -872,27 +806,28 @@ int main(int argc, char **argv)
 	portid = 0;
 
 	/* 等待信号销毁线程 */
-	sem_wait(&tx_can_be_destroyed);
-	pool_destroy(0);
-	// sem_wait(&rx_can_be_destroyed);
-	// pool_destroy(1);
-	sem_wait(&tx_buff_can_be_destroyed);
-	pool_destroy(4);
-	// sem_wait(&rx_buff_can_be_destroyed);
-	// pool_destroy(5);
+	// sem_wait(&tx_can_be_destroyed);
+	// pool_destroy(0);
+	sem_wait(&rx_can_be_destroyed);
+	pool_destroy(1);
+	// sem_wait(&tx_buff_can_be_destroyed);
+	// pool_destroy(4);
+	sem_wait(&rx_buff_can_be_destroyed);
+	pool_destroy(5);
 
 	/* 销毁信号量*/
-	sem_destroy(&tx_can_be_destroyed);
-	// sem_destroy(&rx_can_be_destroyed);
-	sem_destroy(&tx_buff_can_be_destroyed);
-	// sem_destroy(&rx_buff_can_be_destroyed);
-	sem_destroy(&tx_prepared);
-	// sem_destroy(&rx_prepared);
-	sem_destroy(&tx_buff_prepared);
-	// sem_destroy(&rx_buff_prepared);
-	sem_destroy(&cache_tx);
-	// sem_destroy(&cache_rx);
-	sem_destroy(&buff_full);
+	// sem_destroy(&tx_can_be_destroyed);
+	sem_destroy(&rx_can_be_destroyed);
+	// sem_destroy(&tx_buff_can_be_destroyed);
+	sem_destroy(&rx_buff_can_be_destroyed);
+	// sem_destroy(&tx_prepared);
+	sem_destroy(&rx_prepared);
+	// sem_destroy(&tx_buff_prepared);
+	sem_destroy(&rx_buff_prepared);
+	// sem_destroy(&cache_tx);
+	sem_destroy(&cache_rx);
+	sem_destroy(&sem_buff_full);
+	sem_destroy(&sem_buff_empty);
 
 	printf("Closing port %d...", portid);
 	rte_eth_dev_stop(portid);
