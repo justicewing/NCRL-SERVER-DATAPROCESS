@@ -358,7 +358,7 @@ void TaskScheduler_tx(void *arg)
 	printf("TaskScheduler tx prepared...\n");
 	sem_post(&tx_prepared);
 	sem_post(&tx_prepared);
-	sem_wait(&tx_buff_prepared);
+	// sem_wait(&tx_buff_prepared);
 	//--------------------Data processing--------------------
 	ServiceEN_tx = (int *)malloc(sizeof(int) * PARA_NUM_TX * TASK_NUM_TX);
 	for (int i = 0; i < PARA_NUM_TX; i++)

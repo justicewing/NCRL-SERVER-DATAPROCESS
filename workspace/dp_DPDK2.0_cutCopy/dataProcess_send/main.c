@@ -100,7 +100,7 @@ extern pthread_mutex_t mutex_startNum_tx;
 extern struct package_t package_tx[PACK_CACHE];
 
 #define SENDABLE_FLAG 0xFF
-#define SEND_TOKEN_INIT 1
+#define SEND_TOKEN_INIT 32
 
 int sendable;
 int send_token = SEND_TOKEN_INIT;
@@ -874,19 +874,6 @@ int main(int argc, char **argv)
 	// sem_init(&buff_full, 0, 0);
 
 	/* 初始化线程池 */
-	// pool_init(0, 1, 0);
-	// printf("creat pool 0...\n");
-	// pool_init(1, 1, 1);
-	// printf("creat pool 1...\n");
-	// pool_init(2, threadNum_tx, 2);
-	// printf("creat pool 2...\n");
-	// pool_init(2 + threadNum_tx, threadNum_rx, 3);
-	// printf("creat pool 3...\n");
-	// pool_init(2 + threadNum_tx + threadNum_rx, 1, 4);
-	// printf("creat pool 4...\n");
-	// pool_init(3 + threadNum_tx + threadNum_rx, 1, 5);
-	// printf("creat pool 4...\n");
-
 	pool_init(0, 1, 0);
 	printf("creat pool 0...\n");
 	pool_init(1, threadNum_tx, 2);
@@ -897,17 +884,9 @@ int main(int argc, char **argv)
 	/* 添加发送端主任务 */
 	pool_add_task(TaskScheduler_tx, NULL, 0);
 	printf("add Tx TaskScheduler to pool 0...\n");
-	/* 添加接收端主任务 */
-	// pool_add_task(TaskScheduler_rx, NULL, 1);
-	// printf("add Rx TaskScheduler to pool 1...\n");
-	/* 添加发送端缓存任务 */
-	// pool_add_task(Tx_buff, NULL, 4);
-	// printf("add Tx Buff to pool 4...\n");
-	/* 添加发送端缓存任务 */
-	// pool_add_task(Rx_buff, NULL, 5);
-	// printf("add Rx Buff to pool 5...\n");
 
 	ret = 0;
+
 	/* launch tasks on lcore */
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_c, NULL, 1);
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_receive, NULL, 2);

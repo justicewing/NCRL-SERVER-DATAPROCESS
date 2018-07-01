@@ -879,7 +879,7 @@ void TaskScheduler_rx(void *arg)
 
 	sem_post(&rx_prepared);
 	sem_post(&rx_prepared);
-	sem_wait(&rx_buff_prepared);
+	// sem_wait(&rx_buff_prepared);
 
 	// omp_set_num_threads(1);
 	sem_wait(&cache_rx);

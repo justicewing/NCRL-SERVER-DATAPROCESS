@@ -258,19 +258,6 @@ int package(uint8_t *data, int length, struct rte_mbuf *m)
 	return 0;
 }
 
-// int depackage(uint8_t *data, int length, uint8_t *adcnt)
-// {
-// 	int cnt = 0;
-// 	adcnt += 16;
-
-// 	for (cnt = 0; cnt < length; cnt++)
-// 	{
-// 		data[cnt] = *adcnt;
-// 		adcnt++;
-// 	}
-// 	return 0;
-// }
-
 /* 直接卸载到Rx缓冲区 */
 int depackage(struct package_t *pkg_rx, uint8_t *adcnt)
 {
@@ -327,6 +314,16 @@ int depackage(struct package_t *pkg_rx, uint8_t *adcnt)
 			data[cnt] = *adcnt;
 			adcnt++;
 		}
+	}
+	if (type == 1 + MAX_BEAM && num == MAX_CQI_MOD * DATA_SYM_NUM - 1)
+	{
+		index_rx_write++;
+		if (index_rx_write >= PACK_CACHE)
+			index_rx_write = 0;
+		pthread_mutex_lock(&mutex_readyNum_rx);
+		readyNum_rx++;
+		pthread_mutex_unlock(&mutex_readyNum_rx);
+		sem_post(&cache_rx);
 	}
 
 	return 0;
@@ -553,14 +550,6 @@ l2fwd_main_consumer(void)
 				pthread_mutex_unlock(&mutex_startNum_rx);
 
 				depackage(&package_rx[index_rx_write], adcnt);
-
-				index_rx_write++;
-				if (index_rx_write >= PACK_CACHE)
-					index_rx_write = 0;
-				pthread_mutex_lock(&mutex_readyNum_rx);
-				readyNum_rx++;
-				pthread_mutex_unlock(&mutex_readyNum_rx);
-				sem_post(&cache_rx);
 
 				// indx_seg++;
 				// if (indx_seg >= SEG_SIZE)
