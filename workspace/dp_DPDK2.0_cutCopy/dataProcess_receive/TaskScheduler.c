@@ -33,6 +33,7 @@ extern sem_t tx_buff_prepared;
 extern sem_t rx_buff_prepared;
 extern sem_t cache_tx;
 extern sem_t cache_rx;
+extern sem_t rx_buff_is_not_full;
 #define PARA_NUM_TX 2 // 发送端同时处理子帧上限
 #define PARA_NUM_RX 5 // 接收端同时处理子帧上限
 const int SBNum = 50; // 信道估计相关
@@ -883,6 +884,7 @@ void TaskScheduler_rx(void *arg)
 
 	// omp_set_num_threads(1);
 	sem_wait(&cache_rx);
+	// printf("I'm awake!\n\n");
 	if (TIME_EN == 1)
 		gettimeofday(&rx_begin, NULL); //--------------------rx
 
@@ -1320,10 +1322,12 @@ void TaskScheduler_rx(void *arg)
 				pthread_mutex_lock(&mutex_startNum_rx);
 				startNum_rx--;
 				pthread_mutex_unlock(&mutex_startNum_rx);
+				sem_post(&rx_buff_is_not_full);
 			}
 		}
 	}
 	fclose(fpr);
+	sem_post(&rx_buff_is_not_full);
 	printf("Rx exit\n");
 	sem_post(&rx_can_be_destroyed);
 	freeQAMtable();

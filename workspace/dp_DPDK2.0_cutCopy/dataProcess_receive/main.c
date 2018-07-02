@@ -1,4 +1,4 @@
-//版本号:1.1
+//版本号:2.0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,6 +75,7 @@ sem_t lcore_send_prepared;
 sem_t lcore_receive_prepared;
 sem_t lcore_p_prepared;
 sem_t lcore_c_prepared;
+sem_t rx_buff_is_not_full;
 // sem_t feedback_sem;
 
 extern uint8_t *databuff;
@@ -259,71 +260,146 @@ int package(uint8_t *data, int length, struct rte_mbuf *m)
 }
 
 /* 直接卸载到Rx缓冲区 */
+// int count_pkg;
+// #define NUM_PKG (1 +                                                      \
+// 				 sizeof(lapack_complex_float) * RX_ANT_NUM * SYMBOL_NUM + \
+// 				 MAX_CQI_MOD * DATA_SYM_NUM * MAX_BEAM)
+// int err_flag;
+int type_pre;
+int num_pre;
 int depackage(struct package_t *pkg_rx, uint8_t *adcnt)
 {
-	adcnt += 16;
+	// count_pkg++;
+	adcnt += 128;
 
 	int8_t type = *adcnt;
 	adcnt++;
-	int16_t num = *adcnt << 8 + *(adcnt + 1);
+	int16_t num = (*adcnt << 8) + *(adcnt + 1);
 	adcnt += 2;
-	int16_t length = *adcnt << 8 + *(adcnt + 1);
+	int16_t length = (*adcnt << 8) + *(adcnt + 1);
 	adcnt += 2;
 
-	if (type == 0)
+	FILE *fpy = fopen("type_num.txt", "a");
+	fprintf(fpy, "%4d,%4d;%4d,%4d\n", type, num, type_pre, num_pre);
+	fclose(fpy);
+
+	if (type == -1)
 	{
-		uint8_t *tbs_p = (uint8_t *)(pkg_rx->tbs);
-		for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
+	}
+
+	int err_flag = !((type == type_pre) && (num == num_pre));
+	printf("%d", err_flag);
+	if (err_flag == 0)
+	{
+		if (type == 0)
 		{
-			*tbs_p = *adcnt;
-			adcnt++;
-			tbs_p++;
+			// if (err_flag == 0)
+			// {
+			pthread_mutex_lock(&mutex_startNum_rx);
+			startNum_rx++;
+			pthread_mutex_unlock(&mutex_startNum_rx);
+			// }
+			// else
+			// 	err_flag = 0;
+
+			uint8_t *tbs_p = (uint8_t *)(pkg_rx->tbs);
+			for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
+			{
+				*tbs_p = *adcnt;
+				adcnt++;
+				tbs_p++;
+			}
+
+			uint8_t *cqi_p = (uint8_t *)(pkg_rx->CQI_index);
+			for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
+			{
+				*cqi_p = *adcnt;
+				adcnt++;
+				cqi_p++;
+			}
+
+			uint8_t *snr_p = (uint8_t *)(&(pkg_rx->SNR));
+			for (int i = 0; i < sizeof(float); i++)
+			{
+				*snr_p = *adcnt;
+				adcnt++;
+				snr_p++;
+			}
+		}
+		else if (type == 1)
+		{
+			int8_t *data = (int8_t *)pkg_rx->y + length * num;
+			for (int cnt = 0; cnt < length; cnt++)
+			{
+				data[cnt] = *adcnt;
+				adcnt++;
+			}
+		}
+		else if (type >= 2 && type < 2 + MAX_BEAM)
+		{
+			int num_data = type - 2;
+			int8_t *data = (int8_t *)pkg_rx->data[num_data] + length * num;
+			for (int cnt = 0; cnt < length; cnt++)
+			{
+				data[cnt] = *adcnt;
+				adcnt++;
+			}
+		}
+		if (type == 1 + MAX_BEAM)
+		{
+			// printf("num = %d\n", num);
+			if (num == MAX_CQI_MOD * DATA_SYM_NUM - 1)
+			{
+				// if (count_pkg == NUM_PKG)
+				// {
+				index_rx_write++;
+				if (index_rx_write >= PACK_CACHE)
+					index_rx_write = 0;
+				pthread_mutex_lock(&mutex_readyNum_rx);
+				readyNum_rx++;
+				pthread_mutex_unlock(&mutex_readyNum_rx);
+				printf("readyNum_rx:%d\n", readyNum_rx);
+				sem_post(&cache_rx);
+				// }
+				// else
+				// 	err_flag = 1;
+				// count_pkg = 0;
+			}
 		}
 
-		uint8_t *cqi_p = (uint8_t *)(pkg_rx->CQI_index);
-		for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
+		// 对下一组type,num做出预计
+		num_pre++;
+		if (type_pre == 0)
 		{
-			*cqi_p = *adcnt;
-			adcnt++;
-			cqi_p++;
+			if (num_pre > 0)
+			{
+				type_pre++;
+				num_pre = 0;
+			}
 		}
-
-		uint8_t *snr_p = (uint8_t *)(&(pkg_rx->SNR));
-		for (int i = 0; i < sizeof(float); i++)
+		else if (type_pre == 1)
 		{
-			*snr_p = *adcnt;
-			adcnt++;
-			snr_p++;
+			if (num_pre >= sizeof(lapack_complex_float) * RX_ANT_NUM * SYMBOL_NUM)
+			{
+				num_pre = 0;
+				type_pre++;
+			}
 		}
-	}
-	else if (type == 1)
-	{
-		int8_t *data = (int8_t *)pkg_rx->y + length * num;
-		for (int cnt = 0; cnt < length; cnt++)
+		else
 		{
-			data[cnt] = *adcnt;
-			adcnt++;
-		}
-	}
-	else if (type >= 2 && type < 2 + MAX_BEAM)
-	{
-		int num_data = type - 2;
-		int8_t *data = (int8_t *)pkg_rx->data[num_data] + length * num;
-		for (int cnt = 0; cnt < length; cnt++)
-		{
-			data[cnt] = *adcnt;
-			adcnt++;
+			if (num_pre >= MAX_CQI_MOD * DATA_SYM_NUM)
+			{
+				num_pre = 0;
+				type_pre++;
+				if (type_pre >= 2 + MAX_BEAM)
+					type_pre = 0;
+			}
 		}
 	}
-	if (type == 1 + MAX_BEAM && num == MAX_CQI_MOD * DATA_SYM_NUM - 1)
+	else
 	{
-		index_rx_write++;
-		if (index_rx_write >= PACK_CACHE)
-			index_rx_write = 0;
-		pthread_mutex_lock(&mutex_readyNum_rx);
-		readyNum_rx++;
-		pthread_mutex_unlock(&mutex_readyNum_rx);
-		sem_post(&cache_rx);
+		type_pre = 0;
+		num_pre = 0;
 	}
 
 	return 0;
@@ -521,13 +597,20 @@ l2fwd_main_consumer(void)
 {
 	void *d = NULL;
 	void **e = &d;
-	unsigned lcore_id;
 	uint8_t *adcnt = NULL;
-	lcore_id = rte_lcore_id();
+	unsigned lcore_id = rte_lcore_id();
 	RTE_LOG(INFO, L2FWD, "entering main loop consume on core %u\n", lcore_id);
-	int indx_seg = 0;
-	int pkg_cnt = 0;
-	buff_empty = 1;
+	// int indx_seg = 0;
+	// int pkg_cnt = 0;
+	// buff_empty = 1;
+	// count_pkg = 0;
+	// err_flag = 0;
+	type_pre = 0;
+	num_pre = 0;
+
+	readyNum_rx = 0, startNum_rx = 0;
+	pthread_mutex_init(&mutex_readyNum_rx, NULL);
+	pthread_mutex_init(&mutex_startNum_rx, NULL);
 
 	sem_post(&lcore_c_prepared);
 	sem_wait(&lcore_receive_prepared);
@@ -535,9 +618,11 @@ l2fwd_main_consumer(void)
 
 	while (!force_quit)
 	{
-		if (!buff_empty)
-			sem_wait(&sem_buff_empty);
-		if (buff_empty)
+		// if (!buff_empty)
+		// 	sem_wait(&sem_buff_empty);
+		if (startNum_rx >= PACK_CACHE)
+			sem_wait(&rx_buff_is_not_full);
+		if (startNum_rx < PACK_CACHE)
 		{
 			if (rte_ring_mc_dequeue(ring_receive, e) < 0)
 				;
@@ -545,9 +630,9 @@ l2fwd_main_consumer(void)
 			{
 				adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
 
-				pthread_mutex_lock(&mutex_startNum_rx);
-				startNum_rx++;
-				pthread_mutex_unlock(&mutex_startNum_rx);
+				// pthread_mutex_lock(&mutex_startNum_rx);
+				// startNum_rx++;
+				// pthread_mutex_unlock(&mutex_startNum_rx);
 
 				depackage(&package_rx[index_rx_write], adcnt);
 
@@ -800,6 +885,7 @@ int main(int argc, char **argv)
 	sem_init(&lcore_receive_prepared, 0, 0);
 	sem_init(&lcore_p_prepared, 0, 0);
 	sem_init(&lcore_c_prepared, 0, 0);
+	sem_init(&rx_buff_is_not_full, 0, 0);
 	// sem_init(&feedback_sem, 0, 0);
 
 	/* 初始化互斥锁 */

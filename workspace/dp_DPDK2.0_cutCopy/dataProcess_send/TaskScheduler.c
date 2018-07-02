@@ -35,6 +35,7 @@ extern sem_t cache_tx;
 extern sem_t cache_rx;
 #define PARA_NUM_TX 2 // 发送端同时处理子帧上限
 #define PARA_NUM_RX 5 // 接收端同时处理子帧上限
+#define SOURCE_TYPE 0 // 信源类型(0:全0序列;1:全1序列;2:随机序列)
 const int SBNum = 50; // 信道估计相关
 //test
 struct package_t package_tx[PACK_CACHE];
@@ -343,7 +344,12 @@ void TaskScheduler_tx(void *arg)
 				//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
 				for (int j = 0; j < data_len_tx[k][i]; j++)
 				{
-					data_tx[k][i][j] = rand() % 2;
+					if (SOURCE_TYPE == 0)
+						data_tx[k][i][j] = 0;
+					else if (SOURCE_TYPE == 1)
+						data_tx[k][i][j] = 1;
+					else
+						data_tx[k][i][j] = rand() % 2;
 					// data_tx[k][i][j] = 1;
 					//printf("%d",data_tx[k][i][j]);
 				}
@@ -397,7 +403,12 @@ void TaskScheduler_tx(void *arg)
 						//printf("\nLayer %d : %d Original bits : ", i, data_len_tx[k][i]);
 						for (int j = 0; j < data_len_tx[n][i] / 8; j++)
 						{
-							data_bytes_tx[n][i][j] = rand() % 256;
+							if (SOURCE_TYPE == 0)
+								data_bytes_tx[n][i][j] = 0x00;
+							else if (SOURCE_TYPE == 0)
+								data_bytes_tx[n][i][j] = 0xFF;
+							else
+								data_bytes_tx[n][i][j] = rand() % 256;
 							// data_bytes_tx[n][i][j] = 0xFF;
 							//printf("%d",data_tx[k][i][j]);
 						}
@@ -1400,7 +1411,7 @@ void Rx_buff(void *arg)
 	printf("Rx Buff prepared...\n");
 	sem_post(&rx_buff_prepared);
 	sem_wait(&rx_prepared);
-	// printf("rx buff start\n");	
+	// printf("rx buff start\n");
 	while (!force_quit)
 	{
 		if (buff_empty)
@@ -1412,7 +1423,7 @@ void Rx_buff(void *arg)
 			pthread_mutex_unlock(&mutex_startNum_rx);
 			// printf("\nrx buff circle start:%d\n", index_rx_write);
 			// printf("startNum_rx = %d\n", startNum_rx);
-			// printf("readyNum_rx = %d\n", readyNum_rx);			
+			// printf("readyNum_rx = %d\n", readyNum_rx);
 			buff_to_package(&package_rx[index_rx_write], databuff);
 			// printf("\nrx buff down:%d\n", index_rx_write);
 			index_rx_write++;

@@ -1,4 +1,4 @@
-//版本号:1.1
+//版本号:2.0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,7 +100,7 @@ extern pthread_mutex_t mutex_startNum_tx;
 extern struct package_t package_tx[PACK_CACHE];
 
 #define SENDABLE_FLAG 0xFF
-#define SEND_TOKEN_INIT 32
+#define SEND_TOKEN_INIT 1
 
 int sendable;
 int send_token = SEND_TOKEN_INIT;
@@ -275,7 +275,7 @@ print_mbuf_receive(struct rte_mbuf *m)
 int package(struct package_t *pkg_tx, int8_t type, int16_t num, int16_t length, struct rte_mbuf *m)
 {
 
-	static const int length_prefix = 16;
+	static const int length_prefix = 128;
 	static const int length_type = sizeof(type);
 	static const int length_num = sizeof(num);
 	static const int length_length = sizeof(length);
@@ -285,7 +285,7 @@ int package(struct package_t *pkg_tx, int8_t type, int16_t num, int16_t length, 
 	uint8_t *adcnt = (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *);
 
 	// 填写前缀
-	for (int i = 0; i < 16; i++)
+	for (int i = 0; i < length_prefix; i++)
 	{
 		*adcnt = 0xFF;
 		adcnt++;
