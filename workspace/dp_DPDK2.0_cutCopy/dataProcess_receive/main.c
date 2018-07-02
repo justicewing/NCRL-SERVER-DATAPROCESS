@@ -270,7 +270,7 @@ int num_pre;
 int depackage(struct package_t *pkg_rx, uint8_t *adcnt)
 {
 	// count_pkg++;
-	adcnt += 128;
+	adcnt += 64;
 
 	int8_t type = *adcnt;
 	adcnt++;
@@ -279,16 +279,23 @@ int depackage(struct package_t *pkg_rx, uint8_t *adcnt)
 	int16_t length = (*adcnt << 8) + *(adcnt + 1);
 	adcnt += 2;
 
-	FILE *fpy = fopen("type_num.txt", "a");
-	fprintf(fpy, "%4d,%4d;%4d,%4d\n", type, num, type_pre, num_pre);
-	fclose(fpy);
+	// FILE *fpy = fopen("type_num.txt", "a");
+	// fprintf(fpy, "%4d,%4d;%4d,%4d\n", type, num, type_pre, num_pre);
+	// fclose(fpy);
 
-	if (type == -1)
-	{
-	}
+	// int err_flag = !((type == type_pre) && (num == num_pre));
 
-	int err_flag = !((type == type_pre) && (num == num_pre));
-	printf("%d", err_flag);
+	int err_flag;
+	if (type == 0)
+		err_flag = !((num == 0) && (length == 4*17));
+	else if (type == 1)
+		err_flag = !((num >= 0) && (num < 896));
+	else if ((type >= 2) && (type <= 9))
+		err_flag = !((num >= 0) && (num < 72));
+	else
+		err_flag = 1;
+	// printf("%d", err_flag);
+
 	if (err_flag == 0)
 	{
 		if (type == 0)
@@ -358,7 +365,7 @@ int depackage(struct package_t *pkg_rx, uint8_t *adcnt)
 				pthread_mutex_lock(&mutex_readyNum_rx);
 				readyNum_rx++;
 				pthread_mutex_unlock(&mutex_readyNum_rx);
-				printf("readyNum_rx:%d\n", readyNum_rx);
+				// printf("readyNum_rx:%d\n", readyNum_rx);
 				sem_post(&cache_rx);
 				// }
 				// else
@@ -368,43 +375,44 @@ int depackage(struct package_t *pkg_rx, uint8_t *adcnt)
 		}
 
 		// 对下一组type,num做出预计
-		num_pre++;
-		if (type_pre == 0)
-		{
-			if (num_pre > 0)
-			{
-				type_pre++;
-				num_pre = 0;
-			}
-		}
-		else if (type_pre == 1)
-		{
-			if (num_pre >= sizeof(lapack_complex_float) * RX_ANT_NUM * SYMBOL_NUM)
-			{
-				num_pre = 0;
-				type_pre++;
-			}
-		}
-		else
-		{
-			if (num_pre >= MAX_CQI_MOD * DATA_SYM_NUM)
-			{
-				num_pre = 0;
-				type_pre++;
-				if (type_pre >= 2 + MAX_BEAM)
-					type_pre = 0;
-			}
-		}
+		// num_pre++;
+		// if (type_pre == 0)
+		// {
+		// 	if (num_pre > 0)
+		// 	{
+		// 		type_pre++;
+		// 		num_pre = 0;
+		// 	}
+		// }
+		// else if (type_pre == 1)
+		// {
+		// 	if (num_pre >= sizeof(lapack_complex_float) * RX_ANT_NUM * SYMBOL_NUM)
+		// 	{
+		// 		num_pre = 0;
+		// 		type_pre++;
+		// 	}
+		// }
+		// else
+		// {
+		// 	if (num_pre >= MAX_CQI_MOD * DATA_SYM_NUM)
+		// 	{
+		// 		num_pre = 0;
+		// 		type_pre++;
+		// 		if (type_pre >= 2 + MAX_BEAM)
+		// 			type_pre = 0;
+		// 	}
+		// }
 	}
-	else
-	{
-		type_pre = 0;
-		num_pre = 0;
-	}
+	// else
+	// {
+	// 	type_pre = 0;
+	// 	num_pre = 0;
+	// }
 
 	return 0;
 }
 
+// sem_t send_ring_is_not_full;
 static void
 l2fwd_main_loop_send(void)
 {
@@ -466,6 +474,7 @@ l2fwd_main_loop_send(void)
 				;
 			else
 			{
+				// sem_post(&send_ring_is_not_full);
 				pthread_mutex_lock(&mutex_send_token);
 				send_token--;
 				pthread_mutex_unlock(&mutex_send_token);
@@ -505,6 +514,7 @@ l2fwd_main_loop_send(void)
 			prev_tsc = cur_tsc;
 		}
 	}
+	// sem_post(&send_ring_is_not_full);
 }
 static void
 l2fwd_main_loop_receive(void)
@@ -530,7 +540,7 @@ l2fwd_main_loop_receive(void)
 		// {
 		for (j = 0; j < nb_rx; j++)
 		{
-			print_mbuf_receive(pkts_burst[j]);
+			// print_mbuf_receive(pkts_burst[j]);
 			rte_ring_mp_enqueue(ring_receive, pkts_burst[j]);
 			//rte_pktmbuf_free(pkts_burst[j]);
 			package_received++;
@@ -541,6 +551,7 @@ l2fwd_main_loop_receive(void)
 		// else
 		// 	break;
 	}
+	// printf("package_received:%d\n", package_received);
 }
 
 static void
@@ -567,11 +578,15 @@ l2fwd_main_producer(void)
 	int16_t num;
 	int16_t length;
 
+	// sem_init(&send_ring_is_not_full, 0, 0);
+
 	sem_post(&lcore_p_prepared);
 	sem_wait(&lcore_send_prepared);
 
 	while (!force_quit)
 	{
+		// if (rte_ring_full(ring_send))
+		// sem_wait(&send_ring_is_not_full);
 		if (!rte_ring_full(ring_send))
 		{
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
@@ -586,12 +601,13 @@ l2fwd_main_producer(void)
 				; //printf("p!\n");
 
 			packet_num_threw_in_ring++;
-			feedbackable = 0;
+			// feedbackable = 0;
 		}
 		// }
 	}
 	printf("入列的包个数%d\n", packet_num_threw_in_ring);
 }
+int count_send_token;
 static void
 l2fwd_main_consumer(void)
 {
@@ -605,6 +621,7 @@ l2fwd_main_consumer(void)
 	// buff_empty = 1;
 	// count_pkg = 0;
 	// err_flag = 0;
+	count_send_token = 0;
 	type_pre = 0;
 	num_pre = 0;
 
@@ -648,7 +665,10 @@ l2fwd_main_consumer(void)
 				// }
 				pthread_mutex_lock(&mutex_send_token);
 				send_token++;
+				// count_send_token++;
 				pthread_mutex_unlock(&mutex_send_token);
+				// printf("send_token:%d\n",send_token);
+				// printf("count_send_token:%d\n",count_send_token);
 				rte_pktmbuf_free(*(struct rte_mbuf **)e);
 			}
 		}

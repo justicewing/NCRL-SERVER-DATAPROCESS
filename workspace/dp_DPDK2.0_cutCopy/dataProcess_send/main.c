@@ -100,7 +100,7 @@ extern pthread_mutex_t mutex_startNum_tx;
 extern struct package_t package_tx[PACK_CACHE];
 
 #define SENDABLE_FLAG 0xFF
-#define SEND_TOKEN_INIT 1
+#define SEND_TOKEN_INIT 500
 
 int sendable;
 int send_token = SEND_TOKEN_INIT;
@@ -275,7 +275,7 @@ print_mbuf_receive(struct rte_mbuf *m)
 int package(struct package_t *pkg_tx, int8_t type, int16_t num, int16_t length, struct rte_mbuf *m)
 {
 
-	static const int length_prefix = 128;
+	static const int length_prefix = 64;
 	static const int length_type = sizeof(type);
 	static const int length_num = sizeof(num);
 	static const int length_length = sizeof(length);
@@ -416,7 +416,7 @@ l2fwd_main_loop_send(void)
 				pthread_mutex_lock(&mutex_send_token);
 				send_token--;
 				pthread_mutex_unlock(&mutex_send_token);
-				print_mbuf_send(*(struct rte_mbuf **)e);
+				// print_mbuf_send(*(struct rte_mbuf **)e);
 				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
 				port_statistics[portid].tx += sent;
 				rte_pktmbuf_free(*(struct rte_mbuf **)e);
@@ -515,6 +515,8 @@ l2fwd_main_producer(void)
 	{
 		if (readyNum_tx == 0)
 			sem_wait(&cache_tx);
+		// if (rte_ring_full(ring_send))
+		// 	printf("!");
 		if ((!rte_ring_full(ring_send)) && (readyNum_tx > 0))
 		{
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
