@@ -63,7 +63,7 @@
 
 1. 去除原编解码-DPDK系统中buff缓存模块
 
-2. 试图解决丢包后系统崩溃问题
+2. 试图解决丢包、误包后系统崩溃问题
 
 %===========第一节=================
 \section{去除buff缓存模块的编解码-DPDK系统}
@@ -86,7 +86,7 @@
 \end{figure}
 
 %===========第二节=================
-\section{丢包问题的研究与尝试}
+\section{丢包误包问题的研究与尝试}
 方案一：检测到丢包或误包后丢弃整个package\_tx \\
 结果：系统正常处理十几个包后停滞。\\
 原因：误包过多，可能与DPDK机制有关。\\
@@ -118,6 +118,11 @@
 丢包问题严重：\\
 大约平均每1000个包就会存在一次丢包\\
 原因未知
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{frame_token.pdf}
+	\caption{基于令牌的流量控制系统}
+\end{figure}
 \begin{figure}[H]
 	\centering
 	\includegraphics[width = .8\textwidth]{result_drop_send.png}
