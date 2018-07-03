@@ -1,4 +1,4 @@
-//版本号:1.1
+//版本号:2.1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +15,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <semaphore.h>
 
 #include <rte_common.h>
 #include <rte_log.h>
@@ -40,11 +41,81 @@
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
 
-static volatile bool force_quit;
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <assert.h>
+#include <unistd.h>
+#include <errno.h>
+#include <semaphore.h>
+#include <math.h>
+#include <time.h>
+#include <complex.h>
+#include "mkl.h"
+#include "thread_pool.h"
+#include "srslte/fec/cbsegm.h"
+#include "TaskScheduler.h"
+#include "config.h"
+
+const int threadNum_tx = 1; // 发送端线程数
+const int threadNum_rx = 1; // 接收端线程数
+
+/* 声明互斥锁 */
+pthread_mutex_t mutex1_tx;
+pthread_mutex_t mutex2_tx;
+pthread_mutex_t mutex1_rx;
+pthread_mutex_t mutex2_rx;
+pthread_mutex_t mutex3_rx;
+
+/* 声明信号量 */
+sem_t tx_can_be_destroyed;
+sem_t rx_can_be_destroyed;
+sem_t tx_buff_can_be_destroyed;
+sem_t rx_buff_can_be_destroyed;
+sem_t tx_prepared;
+sem_t rx_prepared;
+sem_t tx_buff_prepared;
+sem_t rx_buff_prepared;
+sem_t cache_tx;
+sem_t cache_rx;
+sem_t buff_full;
+
+/* 声明信号量 */
+sem_t lcore_send_prepared;
+sem_t lcore_receive_prepared;
+sem_t lcore_p_prepared;
+sem_t lcore_c_prepared;
+sem_t sendable_sem;
+
+extern uint8_t *databuff;
+extern pthread_mutex_t mutex_buff_empty;
+extern int buff_empty;
+extern int readyNum_tx;
+extern int startNum_tx;
+extern int index_tx_read;
+extern pthread_mutex_t mutex_readyNum_tx;
+extern pthread_mutex_t mutex_startNum_tx;
+extern struct package_t package_tx[PACK_CACHE];
+
+#define SENDABLE_FLAG 0xFF
+#define SEND_TOKEN_INIT 1
+
+int sendable;
+int send_token = SEND_TOKEN_INIT;
+pthread_mutex_t mutex_send_token;
+
+// static volatile bool force_quit;	// 不能在其他编译单元内使用
+volatile bool force_quit;
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
 #define NB_MBUF 8192
+#define MBUFF_DATA_LENGTH 1200
+#define SEG_SIZE 1792
+
+// uint8_t *data_to_be_sent;
 
 #define MAX_PKT_BURST 32
 #define BURST_TX_DRAIN_US 4 /* TX drain every ~100us */
@@ -53,8 +124,8 @@ static volatile bool force_quit;
 /*
  * Configurable number of RX/TX ring descriptors
  */
-#define RTE_TEST_RX_DESC_DEFAULT 128
-#define RTE_TEST_TX_DESC_DEFAULT 512
+#define RTE_TEST_RX_DESC_DEFAULT 2048
+#define RTE_TEST_TX_DESC_DEFAULT 2048
 static uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
 static uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 
@@ -88,7 +159,7 @@ static const struct rte_eth_conf port_conf = {
 
 struct rte_mempool *l2fwd_pktmbuf_pool = NULL;
 struct rte_ring *ring_send;
-struct rte_ring *ring_recieve;
+struct rte_ring *ring_receive;
 /* Per-port statistics struct */
 struct l2fwd_port_statistics
 {
@@ -143,11 +214,12 @@ print_stats(void)
 		   total_packets_dropped);
 	printf("\n====================================================\n");
 }
-static void print_mbuf_send(struct rte_mbuf *m)
+static void
+print_mbuf_send(struct rte_mbuf *m)
 {
 	uint8_t *adcnt;
 	FILE *fp;
-	fp = fopen("send_data", "a");
+	fp = fopen("send_data.txt", "a");
 	fprintf(fp, "buf_addr:%d\n", m->buf_addr);
 	fprintf(fp, "pkt_len:%d\n", m->pkt_len);
 	fprintf(fp, "data_len:%d\n", m->data_len);
@@ -158,11 +230,12 @@ static void print_mbuf_send(struct rte_mbuf *m)
 	fprintf(fp, "over\n");
 	fclose(fp);
 }
-static void print_mbuf_recieve(struct rte_mbuf *m)
+static void
+print_mbuf_receive(struct rte_mbuf *m)
 {
 	uint8_t *adcnt;
 	FILE *fp;
-	fp = fopen("recieve_data", "a");
+	fp = fopen("receive_data.txt", "a");
 	fprintf(fp, "buf_addr:%d\n", m->buf_addr);
 	fprintf(fp, "pkt_len:%d\n", m->pkt_len);
 	fprintf(fp, "data_len:%d\n", m->data_len);
@@ -173,14 +246,6 @@ static void print_mbuf_recieve(struct rte_mbuf *m)
 	fprintf(fp, "over\n");
 	fclose(fp);
 }
-
-unsigned char data_to_be_sent[2048] = {0};
-unsigned char packet_to_be_sent[2048] = {0};
-unsigned char data_recieved[2048] = {0};
-uint8_t send_en = 0x00; //此变量后面改为全局变量 00停止发送  01开始发送
-int pack_err = 0;
-int else1 = 0;
-int else2 = 0;
 
 struct mac_hdr
 {
@@ -235,22 +300,22 @@ unsigned short cal_ip_checksum(struct ip_hdr hdr)
 	checksum += (checksum >> 16);
 	return (unsigned short)(~checksum);
 }
-unsigned short cal_udp_checksum(struct udp_fhdr_hdr hdr, unsigned char *buffer)
+unsigned short cal_udp_checksum(struct udp_fhdr_hdr hdr) //, unsigned char *buffer)
 {
 	unsigned long checksum = 0;
-	int num = hdr.length - 8;
+	// int num = hdr.length - 8;
 	checksum =
 		hdr.src_ip0 + hdr.src_ip1 + hdr.dst_ip0 + hdr.dst_ip1 + hdr.reserved + hdr.length + hdr.src_port + hdr.dst_port + hdr.length + hdr.checksum;
-	while (num > 1)
-	{
-		checksum += (*buffer << 8) + *(buffer + 1);
-		buffer += 2;
-		num -= sizeof(short);
-	}
-	if (num)
-	{
-		checksum += *(unsigned short *)buffer << 8;
-	}
+	// while (num > 1)
+	// {
+	// 	checksum += (*buffer << 8) + *(buffer + 1);
+	// 	buffer += 2;
+	// 	num -= sizeof(short);
+	// }
+	// if (num)
+	// {
+	// 	checksum += *(unsigned short *)buffer << 8;
+	// }
 	checksum = (checksum >> 16) + (checksum & 0xffff);
 	checksum += (checksum >> 16);
 	return (unsigned short)(~checksum);
@@ -279,252 +344,191 @@ unsigned short get_checksum(unsigned short *buffer, int size) //size是字节数
 	printf("= checksum22=%x\n", cksum);
 	return (unsigned short)(~cksum);
 }
-int package(struct mac_hdr mhdr, struct ip_hdr ihdr, struct udp_fhdr_hdr uhdr, unsigned char *data, struct rte_mbuf *m)
+
+/* 从Tx包缓冲区直接打包 */
+int package(struct mac_hdr mhdr, struct ip_hdr ihdr, struct udp_fhdr_hdr uhdr, struct package_t *pkg_tx, int8_t type, int16_t num, int16_t length, struct rte_mbuf *m)
 {
-	uint8_t *adcnt = NULL;
+
 	unsigned short ichecksum = cal_ip_checksum(ihdr);
-	unsigned short uchecksum = cal_udp_checksum(uhdr, data);
-	int total_length = 34 + uhdr.length;
-	int cnt = 0;
+	unsigned short uchecksum = cal_udp_checksum(uhdr); //, data);
+
+	// static const int length_prefix = 64;
+	static const int length_type = sizeof(type);
+	static const int length_num = sizeof(num);
+	static const int length_length = sizeof(length);
+
+	int total_length = 42 + length + length_type + length_num + length_length;
 
 	if (total_length > 59)
-	{
-		cnt = 0;
-		//printf("total_length_pa=  %d\n",total_length);
 		rte_pktmbuf_append(m, total_length);
-		for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
-			*adcnt = 0x00;
-
-		adcnt = rte_pktmbuf_mtod(m, uint8_t *);
-		*adcnt = mhdr.dst_mac[0];
-		adcnt++;
-		*adcnt = mhdr.dst_mac[1];
-		adcnt++;
-		*adcnt = mhdr.dst_mac[2];
-		adcnt++;
-		*adcnt = mhdr.dst_mac[3];
-		adcnt++;
-		*adcnt = mhdr.dst_mac[4];
-		adcnt++;
-		*adcnt = mhdr.dst_mac[5];
-		adcnt++;
-
-		*adcnt = mhdr.src_mac[0];
-		adcnt++;
-		*adcnt = mhdr.src_mac[1];
-		adcnt++;
-		*adcnt = mhdr.src_mac[2];
-		adcnt++;
-		*adcnt = mhdr.src_mac[3];
-		adcnt++;
-		*adcnt = mhdr.src_mac[4];
-		adcnt++;
-		*adcnt = mhdr.src_mac[5];
-		adcnt++;
-
-		*adcnt = mhdr.type0;
-		adcnt++;
-		*adcnt = mhdr.type1;
-		adcnt++;
-		*adcnt = ihdr.version_headlen_tos >> 8;
-		adcnt++;
-		*adcnt = ihdr.version_headlen_tos;
-		adcnt++;
-		*adcnt = ihdr.length >> 8;
-		adcnt++;
-		*adcnt = ihdr.length;
-		adcnt++;
-		*adcnt = ihdr.flags0 >> 8;
-		adcnt++;
-		*adcnt = ihdr.flags0;
-		adcnt++;
-		*adcnt = ihdr.flags1 >> 8;
-		adcnt++;
-		*adcnt = ihdr.flags1;
-		adcnt++;
-		*adcnt = ihdr.ttl_protocol_checksum0 >> 8;
-		adcnt++;
-		*adcnt = ihdr.ttl_protocol_checksum0;
-		adcnt++;
-		*adcnt = ichecksum >> 8;
-		adcnt++;
-		*adcnt = ichecksum;
-		adcnt++;
-		*adcnt = ihdr.src_ip0 >> 8;
-		adcnt++;
-		*adcnt = ihdr.src_ip0;
-		adcnt++;
-		*adcnt = ihdr.src_ip1 >> 8;
-		adcnt++;
-		*adcnt = ihdr.src_ip1;
-		adcnt++;
-		*adcnt = ihdr.dst_ip0 >> 8;
-		adcnt++;
-		*adcnt = ihdr.dst_ip0;
-		adcnt++;
-		*adcnt = ihdr.dst_ip1 >> 8;
-		adcnt++;
-		*adcnt = ihdr.dst_ip1;
-		adcnt++;
-
-		*adcnt = uhdr.src_port >> 8;
-		adcnt++;
-		*adcnt = uhdr.src_port;
-		adcnt++;
-		*adcnt = uhdr.dst_port >> 8;
-		adcnt++;
-		*adcnt = uhdr.dst_port;
-		adcnt++;
-		*adcnt = uhdr.length >> 8;
-		adcnt++;
-		*adcnt = uhdr.length;
-		adcnt++;
-		*adcnt = uchecksum >> 8;
-		adcnt++;
-		*adcnt = uchecksum;
-		adcnt++;
-
-		for (cnt = 0; cnt < uhdr.length - 8; cnt++)
-		{
-			*adcnt = data[cnt];
-			*adcnt++;
-		}
-
-		for (adcnt = rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt < (uint8_t *)m->buf_addr + m->buf_len; adcnt++)
-			*adcnt = 0x00;
-		return total_length;
-	}
 	else
-	{
-		cnt = 0;
-		//printf("total_length_pa1=  %d\n",total_length);
 		rte_pktmbuf_append(m, 60);
-		for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
-			*adcnt = 0x00;
 
-		adcnt = rte_pktmbuf_mtod(m, uint8_t *);
-		*adcnt = mhdr.dst_mac[0];
-		adcnt++;
-		*adcnt = mhdr.dst_mac[1];
-		adcnt++;
-		*adcnt = mhdr.dst_mac[2];
-		adcnt++;
-		*adcnt = mhdr.dst_mac[3];
-		adcnt++;
-		*adcnt = mhdr.dst_mac[4];
-		adcnt++;
-		*adcnt = mhdr.dst_mac[5];
-		adcnt++;
+	uint8_t *adcnt = NULL;
 
-		*adcnt = mhdr.src_mac[0];
-		adcnt++;
-		*adcnt = mhdr.src_mac[1];
-		adcnt++;
-		*adcnt = mhdr.src_mac[2];
-		adcnt++;
-		*adcnt = mhdr.src_mac[3];
-		adcnt++;
-		*adcnt = mhdr.src_mac[4];
-		adcnt++;
-		*adcnt = mhdr.src_mac[5];
-		adcnt++;
+	for (adcnt = (uint8_t *)m->buf_addr; adcnt < (uint8_t *)rte_pktmbuf_mtod(m, uint8_t *); adcnt++)
+		*adcnt = 0x00;
 
-		*adcnt = mhdr.type0;
-		adcnt++;
-		*adcnt = mhdr.type1;
-		adcnt++;
-		*adcnt = ihdr.version_headlen_tos >> 8;
-		adcnt++;
-		*adcnt = ihdr.version_headlen_tos;
-		adcnt++;
-		*adcnt = ihdr.length >> 8;
-		adcnt++;
-		*adcnt = ihdr.length;
-		adcnt++;
-		*adcnt = ihdr.flags0 >> 8;
-		adcnt++;
-		*adcnt = ihdr.flags0;
-		adcnt++;
-		*adcnt = ihdr.flags1 >> 8;
-		adcnt++;
-		*adcnt = ihdr.flags1;
-		adcnt++;
-		*adcnt = ihdr.ttl_protocol_checksum0 >> 8;
-		adcnt++;
-		*adcnt = ihdr.ttl_protocol_checksum0;
-		adcnt++;
-		*adcnt = ichecksum >> 8;
-		adcnt++;
-		*adcnt = ichecksum;
-		adcnt++;
-		*adcnt = ihdr.src_ip0 >> 8;
-		adcnt++;
-		*adcnt = ihdr.src_ip0;
-		adcnt++;
-		*adcnt = ihdr.src_ip1 >> 8;
-		adcnt++;
-		*adcnt = ihdr.src_ip1;
-		adcnt++;
-		*adcnt = ihdr.dst_ip0 >> 8;
-		adcnt++;
-		*adcnt = ihdr.dst_ip0;
-		adcnt++;
-		*adcnt = ihdr.dst_ip1 >> 8;
-		adcnt++;
-		*adcnt = ihdr.dst_ip1;
-		adcnt++;
+	adcnt = rte_pktmbuf_mtod(m, uint8_t *);
 
-		*adcnt = uhdr.src_port >> 8;
-		adcnt++;
-		*adcnt = uhdr.src_port;
-		adcnt++;
-		*adcnt = uhdr.dst_port >> 8;
-		adcnt++;
-		*adcnt = uhdr.dst_port;
-		adcnt++;
-		*adcnt = uhdr.length >> 8;
-		adcnt++;
-		*adcnt = uhdr.length;
-		adcnt++;
-		*adcnt = uchecksum >> 8;
-		adcnt++;
-		*adcnt = uchecksum;
-		adcnt++;
-		
-		for (cnt = 0; cnt < uhdr.length - 8; cnt++)
+	*adcnt = mhdr.dst_mac[0];
+	adcnt++;
+	*adcnt = mhdr.dst_mac[1];
+	adcnt++;
+	*adcnt = mhdr.dst_mac[2];
+	adcnt++;
+	*adcnt = mhdr.dst_mac[3];
+	adcnt++;
+	*adcnt = mhdr.dst_mac[4];
+	adcnt++;
+	*adcnt = mhdr.dst_mac[5];
+	adcnt++;
+
+	*adcnt = mhdr.src_mac[0];
+	adcnt++;
+	*adcnt = mhdr.src_mac[1];
+	adcnt++;
+	*adcnt = mhdr.src_mac[2];
+	adcnt++;
+	*adcnt = mhdr.src_mac[3];
+	adcnt++;
+	*adcnt = mhdr.src_mac[4];
+	adcnt++;
+	*adcnt = mhdr.src_mac[5];
+	adcnt++;
+
+	*adcnt = mhdr.type0;
+	adcnt++;
+	*adcnt = mhdr.type1;
+	adcnt++;
+
+	*adcnt = ihdr.version_headlen_tos >> 8;
+	adcnt++;
+	*adcnt = ihdr.version_headlen_tos;
+	adcnt++;
+	*adcnt = ihdr.length >> 8;
+	adcnt++;
+	*adcnt = ihdr.length;
+	adcnt++;
+	*adcnt = ihdr.flags0 >> 8;
+	adcnt++;
+	*adcnt = ihdr.flags0;
+	adcnt++;
+	*adcnt = ihdr.flags1 >> 8;
+	adcnt++;
+	*adcnt = ihdr.flags1;
+	adcnt++;
+	*adcnt = ihdr.ttl_protocol_checksum0 >> 8;
+	adcnt++;
+	*adcnt = ihdr.ttl_protocol_checksum0;
+	adcnt++;
+	*adcnt = ichecksum >> 8;
+	adcnt++;
+	*adcnt = ichecksum;
+	adcnt++;
+	*adcnt = ihdr.src_ip0 >> 8;
+	adcnt++;
+	*adcnt = ihdr.src_ip0;
+	adcnt++;
+	*adcnt = ihdr.src_ip1 >> 8;
+	adcnt++;
+	*adcnt = ihdr.src_ip1;
+	adcnt++;
+	*adcnt = ihdr.dst_ip0 >> 8;
+	adcnt++;
+	*adcnt = ihdr.dst_ip0;
+	adcnt++;
+	*adcnt = ihdr.dst_ip1 >> 8;
+	adcnt++;
+	*adcnt = ihdr.dst_ip1;
+	adcnt++;
+
+	*adcnt = uhdr.src_port >> 8;
+	adcnt++;
+	*adcnt = uhdr.src_port;
+	adcnt++;
+	*adcnt = uhdr.dst_port >> 8;
+	adcnt++;
+	*adcnt = uhdr.dst_port;
+	adcnt++;
+	*adcnt = uhdr.length >> 8;
+	adcnt++;
+	*adcnt = uhdr.length;
+	adcnt++;
+	*adcnt = uchecksum >> 8;
+	adcnt++;
+	*adcnt = uchecksum;
+	adcnt++;
+
+	// 填写包信息
+	*adcnt = type;
+	adcnt++;
+	*adcnt = num >> 8;
+	adcnt++;
+	*adcnt = (int8_t)num;
+	adcnt++;
+	*adcnt = length >> 8;
+	adcnt++;
+	*adcnt = (int8_t)length;
+	adcnt++;
+
+	if (type == 0)
+	{
+		uint8_t *tbs_p = (uint8_t *)(pkg_tx->tbs);
+		for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
 		{
-			*adcnt = data[cnt];
-			*adcnt++;
+			*adcnt = *tbs_p;
+			adcnt++;
+			tbs_p++;
 		}
 
-		for (adcnt; adcnt < rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt++)
-			*adcnt = 0xee;
+		uint8_t *cqi_p = (uint8_t *)(pkg_tx->CQI_index);
+		for (int i = 0; i < MAX_BEAM * sizeof(int); i++)
+		{
+			*adcnt = *cqi_p;
+			adcnt++;
+			cqi_p++;
+		}
 
-		for (adcnt = rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt < (uint8_t *)m->buf_addr + m->buf_len; adcnt++)
-			*adcnt = 0x00;
-		return total_length;
+		uint8_t *snr_p = (uint8_t *)(&(pkg_tx->SNR));
+		for (int i = 0; i < sizeof(float); i++)
+		{
+			*adcnt = *snr_p;
+			adcnt++;
+			snr_p++;
+		}
 	}
-}
-
-int read_from_txt(char *a, int num) //从文件中将数据读入全局数组b[]中，返回0读取成功，返回1文件不存在
-{
-	FILE *fp = NULL;
-	int i = 0;
-	fp = fopen(a, "r");
-	if (fp == NULL)
+	else if (type == 1)
 	{
-		printf("此文件不存在");
-		return 1;
+		int8_t *data = (int8_t *)pkg_tx->y + length * num;
+		for (int cnt = 0; cnt < length; cnt++)
+		{
+			*adcnt = data[cnt];
+			adcnt++;
+		}
 	}
-	for (i = 0; i < num; i++)
-		fscanf(fp, "%x  ", &data_to_be_sent[i]);
-	for (i = 0; i < num; i++)
-		printf("%d   %x\n", i, data_to_be_sent[i]);
-	fclose(fp);
-	return 0;
+	else if (type >= 2 && type < 2 + MAX_BEAM)
+	{
+		int num_data = type - 2;
+		int8_t *data = (int8_t *)pkg_tx->data[num_data] + length * num;
+		for (int cnt = 0; cnt < length; cnt++)
+		{
+			*adcnt = data[cnt];
+			adcnt++;
+		}
+	}
+
+	for (adcnt; adcnt < rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt++)
+		*adcnt = 0xee;
+
+	for (adcnt = rte_pktmbuf_mtod(m, uint8_t *) + m->data_len; adcnt < (uint8_t *)m->buf_addr + m->buf_len; adcnt++)
+		*adcnt = 0x00;
+
+	return total_length;
 }
 
-static int l2fwd_main_loop_send(void)
+static void
+l2fwd_main_loop_send(void)
 {
 
 	void *d = NULL;
@@ -546,10 +550,10 @@ static int l2fwd_main_loop_send(void)
 	lcore_id = rte_lcore_id();
 	qconf = &lcore_queue_conf[lcore_id]; //此处每一个lcore从全局的conf中获取属于自己的conf
 
-	double recieve_rate = 0;
+	double receive_rate = 0;
 	double send_rate = 0;
-	int mac_length_send = 1458;
-	int mac_length_recieve = 1458;
+	int mac_length_send = MBUFF_DATA_LENGTH;
+	int mac_length_receive = MBUFF_DATA_LENGTH;
 
 	RTE_LOG(INFO, L2FWD, "entering main loop send on lcore %u\n", lcore_id);
 
@@ -561,6 +565,9 @@ static int l2fwd_main_loop_send(void)
 				portid);
 	}
 
+	sem_post(&lcore_send_prepared);
+	sem_wait(&lcore_p_prepared);
+
 	while (!force_quit)
 	{
 
@@ -570,24 +577,28 @@ static int l2fwd_main_loop_send(void)
 		 * TX burst queue drain
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
-		if (unlikely((send_en) && (diff_tsc > drain_tsc)))
+		if (unlikely((diff_tsc > drain_tsc)) && (send_token > 0))
 		{
 			portid = 0;
 			buffer = tx_buffer[portid];
 
-			for (j = 0; j < 4; j++)
+			// for (j = 0; j < 4; j++)
+			// {
+			if (rte_ring_mc_dequeue(ring_send, e) < 0)
+				;
+			else
 			{
-				if (rte_ring_mc_dequeue(ring_send, e) < 0)
-					;
-				else
-				{
-					//print_mbuf_send(*(struct rte_mbuf **)e);
-					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
-					port_statistics[portid].tx += sent;
-					rte_pktmbuf_free(*(struct rte_mbuf **)e);
-					e = &d;
-				}
+				pthread_mutex_lock(&mutex_send_token);
+				send_token--;
+				pthread_mutex_unlock(&mutex_send_token);
+				// printf("send_token:%d", send_token);
+				// print_mbuf_send(*(struct rte_mbuf **)e);
+				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
+				port_statistics[portid].tx += sent;
+				rte_pktmbuf_free(*(struct rte_mbuf **)e);
+				e = &d;
 			}
+			// }
 			sent = rte_eth_tx_buffer_flush(portid, 0, buffer);
 			port_statistics[portid].tx += sent;
 
@@ -603,14 +614,11 @@ static int l2fwd_main_loop_send(void)
 				{
 					/* do this only on master core */
 					running_second += 1;
-					print_stats();
-					printf("%d\n", running_second);
+					// print_stats();
+					// printf("%d\n", running_second);
 					send_rate = (port_statistics[portid].tx * mac_length_send * 8 / running_second) / 1000000000.0;
-					recieve_rate = (port_statistics[portid].rx * mac_length_recieve * 8 / running_second) / 1000000000.0;
-					printf("send_rate= %f Gb\nrecieve_rate= %f Gb\n", send_rate, recieve_rate);
-					printf("pack_err= %d\n", pack_err);
-					/* reset the timer */
-					timer_tsc = 0;
+					// printf("send_rate= %f Gb\nreceive_rate= %f Gb\n", send_rate, receive_rated
+					// timer_tsc = 0;
 				}
 			}
 
@@ -618,17 +626,19 @@ static int l2fwd_main_loop_send(void)
 		}
 	}
 }
-
 static void
-l2fwd_main_loop_recieve(void)
+l2fwd_main_loop_receive(void)
 {
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	FILE *fp;
 	unsigned lcore_id;
 	unsigned j, portid, nb_rx;
-	int package_recieved = 0;
+	int package_received = 0;
 	lcore_id = rte_lcore_id();
-	RTE_LOG(INFO, L2FWD, "entering main loop recieve on lcore  %u\n", lcore_id);
+	RTE_LOG(INFO, L2FWD, "entering main loop receive on lcore  %u\n", lcore_id);
+
+	sem_post(&lcore_receive_prepared);
+	sem_wait(&lcore_c_prepared);
 
 	while (!force_quit)
 	{
@@ -636,23 +646,25 @@ l2fwd_main_loop_recieve(void)
 		nb_rx = rte_eth_rx_burst((uint8_t)portid, 0, pkts_burst, MAX_PKT_BURST);
 
 		port_statistics[portid].rx += nb_rx;
-		if (package_recieved < 400)
+		// if (package_received < 400)
+		// {
+		for (j = 0; j < nb_rx; j++)
 		{
-			for (j = 0; j < nb_rx; j++)
-			{
-				print_mbuf_recieve(pkts_burst[j]);
-				rte_ring_mp_enqueue(ring_recieve, pkts_burst[j]);
-				//rte_pktmbuf_free(pkts_burst[j]);
-				package_recieved++;
-			}
+			// print_mbuf_receive(pkts_burst[j]);
+			rte_ring_mp_enqueue(ring_receive, pkts_burst[j]);
+			//rte_pktmbuf_free(pkts_burst[j]);
+			package_received++;
+			if (force_quit)
+				break;
 		}
-		else
-			break;
+		// }
+		// else
+		// 	break;
 	}
 }
 
 static void
-l2fwd_main_p(void)
+l2fwd_main_producer(void)
 {
 	unsigned lcore_id;
 	lcore_id = rte_lcore_id();
@@ -661,28 +673,17 @@ l2fwd_main_p(void)
 	uint8_t *adcnt = NULL;
 	int cnt = 0;
 	int packet_num_threw_in_ring = 0;
-	long long int packet_num_want_to_send = 1;
-	int datalength = 1416;
-	//read_from_txt("data.txt",datalength);
-	uint16_t pack_cnt = 0;
+	int indx_seg = 0;
 
-	int total_length = 0;
-	struct mac_hdr mhdr;
-	mhdr.dst_mac[0] = 0xA0;
-	mhdr.dst_mac[1] = 0x36;
-	mhdr.dst_mac[2] = 0x7A;
-	mhdr.dst_mac[3] = 0x58;
-	mhdr.dst_mac[4] = 0xAD;
-	mhdr.dst_mac[5] = 0x76;
+	struct rte_mbuf *m;
+	int sendable_cnt = 0;
 
-	mhdr.src_mac[0] = 0xA0;
-	mhdr.src_mac[1] = 0x36;
-	mhdr.src_mac[2] = 0x9F;
-	mhdr.src_mac[3] = 0x58;
-	mhdr.src_mac[4] = 0xA6;
-	mhdr.src_mac[5] = 0x76;
-	mhdr.type0 = 0x08;
-	mhdr.type1 = 0x00;
+	// 打包相关参数
+	int type = 0;
+	int num = 0;
+	int length = 4 * 17;
+
+	int datalength = 1200 + 5;
 
 	struct udp_fhdr_hdr uhdr;
 	uhdr.src_port = 0xBEE4;
@@ -691,7 +692,6 @@ l2fwd_main_p(void)
 	uhdr.reserved = 0x0011;
 	uhdr.src_ip0 = 0xC0A8;
 	uhdr.src_ip1 = 0x1405;
-
 	uhdr.dst_ip0 = 0xC0A8;
 	uhdr.dst_ip1 = 0x1401;
 
@@ -711,185 +711,142 @@ l2fwd_main_p(void)
 	ihdr.dst_ip0 = 0xC0A8;
 	ihdr.dst_ip1 = 0x1401;
 
-	data_to_be_sent[0] = 0xFF;
-	data_to_be_sent[1] = 0xFF;
-	data_to_be_sent[2] = 0xFF;
-	data_to_be_sent[3] = 0xFF;
+	struct mac_hdr mhdr;
+	mhdr.dst_mac[0] = 0x68;
+	mhdr.dst_mac[1] = 0xCC;
+	mhdr.dst_mac[2] = 0x6E;
+	mhdr.dst_mac[3] = 0xA4;
+	mhdr.dst_mac[4] = 0xBC;
+	mhdr.dst_mac[5] = 0x53;
 
-	data_to_be_sent[4] = 0x05;
-	data_to_be_sent[5] = 0x77;
-	for (cnt = 6; cnt < 1416; cnt++)
-	{
-		data_to_be_sent[cnt] = 0xff;
-	}
+	mhdr.src_mac[0] = 0x68;
+	mhdr.src_mac[1] = 0xCC;
+	mhdr.src_mac[2] = 0x6E;
+	mhdr.src_mac[3] = 0xA4;
+	mhdr.src_mac[4] = 0xBC;
+	mhdr.src_mac[5] = 0x7F;
+	mhdr.type0 = 0x08;
+	mhdr.type1 = 0x00;
+
+	sem_post(&lcore_p_prepared);
+	sem_wait(&lcore_send_prepared);
+	sem_wait(&tx_prepared);
 
 	while (!force_quit)
 	{
-
-		//if(packet_num_threw_in_ring>=packet_num_want_to_send)break;
-		struct rte_mbuf *m;
-		m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
-		if (m == NULL)
-			printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
-		else
+		if (readyNum_tx <= 0)
+			sem_wait(&cache_tx);
+		// if (rte_ring_full(ring_send))
+		// 	printf("!");
+		if ((!rte_ring_full(ring_send)) && likely(readyNum_tx > 0))
 		{
-
-			//data_to_be_sent[4]=(unsigned char)(packet_num_threw_in_ring>>24);
-			//data_to_be_sent[5]=(unsigned char)(packet_num_threw_in_ring>>16);
-			//data_to_be_sent[6]=(unsigned char)(packet_num_threw_in_ring>>8);
-			//data_to_be_sent[7]=(unsigned char)packet_num_threw_in_ring;
-			if (pack_cnt == 0)
+			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
+			if (m == NULL)
 			{
-				data_to_be_sent[0] = 0x0B;
-				data_to_be_sent[1] = 0x0E;
-				data_to_be_sent[2] = 0x00;
-				data_to_be_sent[3] = 0x00;
-				pack_cnt += 190;
+				printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
+				continue;
 			}
-			else if (pack_cnt < 385)
+
+			// package(databuff + MBUFF_DATA_LENGTH * indx_seg, MBUFF_DATA_LENGTH, m);
+
+			package(mhdr, ihdr, uhdr, &package_tx[index_tx_read], type, num, 1200, m);
+
+			// 打包参数处理
+			num++;
+			if (type == 0)
 			{
-				data_to_be_sent[0] = 0x00;
-				data_to_be_sent[1] = 0x00;
-				data_to_be_sent[2] = pack_cnt >> 8;
-				data_to_be_sent[3] = pack_cnt;
-				pack_cnt++;
+				if (num > 0)
+				{
+					type++;
+					num = 0;
+					length = CARRIER_NUM;
+				}
+			}
+			else if (type == 1)
+			{
+				if (num >= sizeof(lapack_complex_float) * RX_ANT_NUM * SYMBOL_NUM)
+				{
+					num = 0;
+					type++;
+					length = CARRIER_NUM;
+				}
 			}
 			else
 			{
-				data_to_be_sent[0] = 0x00;
-				data_to_be_sent[1] = 0x00;
-				data_to_be_sent[2] = pack_cnt >> 8;
-				data_to_be_sent[3] = pack_cnt;
-				pack_cnt = 0;
+				if (num >= MAX_CQI_MOD * DATA_SYM_NUM)
+				{
+					num = 0;
+					type++;
+					if (type >= 2 + MAX_BEAM)
+					{
+						type = 0;
+						length = 4 * 17;
+						index_tx_read++;
+						if (index_tx_read >= PACK_CACHE)
+							index_tx_read = 0;
+						pthread_mutex_lock(&mutex_readyNum_tx);
+						readyNum_tx--;
+						pthread_mutex_unlock(&mutex_readyNum_tx);
+						pthread_mutex_lock(&mutex_startNum_tx);
+						startNum_tx--;
+						pthread_mutex_unlock(&mutex_startNum_tx);
+						// printf("p:readyNum_tx:%4d,startNum_tx:%4d\n", readyNum_tx, startNum_tx);
+					}
+				}
 			}
 
-			total_length = package(mhdr, ihdr, uhdr, data_to_be_sent, m);
-			//	printf("total_length=  %d\n",total_length);
-
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
-				; //printf("p!\n");
+				;
 
 			packet_num_threw_in_ring++;
-			//cnt++;
+
+			// // databuff定位
+			// indx_seg++;
+			// if (indx_seg >= SEG_SIZE)
+			// {
+			// 	indx_seg = 0;
+			// 	pthread_mutex_lock(&mutex_buff_empty);
+			// 	buff_empty = 1;
+			// 	pthread_mutex_unlock(&mutex_buff_empty);
+			// }
 		}
 	}
 	printf("入列的包个数%d\n", packet_num_threw_in_ring);
 }
 static void
-l2fwd_main_c(void)
+l2fwd_main_consumer(void)
 {
 	void *d = NULL;
 	void **e = &d;
-	struct rte_eth_dev_tx_buffer *buffer;
 	unsigned lcore_id;
-	unsigned portid, j, k;
-	int sent;
 	uint8_t *adcnt = NULL;
-	int cnt = 0;
-	unsigned short data_length = 0;
 	lcore_id = rte_lcore_id();
 	RTE_LOG(INFO, L2FWD, "entering main loop consume on core %u\n", lcore_id);
 
-	FILE *fp = NULL;
-	fp = fopen("luodataint8_t.txt", "a");
-
-	uint16_t pre_pack_hd = 0x0E0D;  //0B0E包开始 0E0D包结束
-	uint16_t pre_pack_idx = 0x0000; //0x0000~0x0181; 包序计数
-
-	uint8_t data_vld; //01包有效  00包无效
-	uint16_t pack_hd; //0B0E包开始 0E0D包结束
-	//uint8_t send_en;//此变量后面改为全局变量 00停止发送  01开始发送
-	uint16_t pack_idx;   //0x0000~0x0181; 包序计数
-	uint16_t packet_len; //0x0000~0x0577;数据有效长度
-
-	uint8_t new_group = 0x00; //01 新的包来了而且还没结束 00正在等待新的包
-	//int pack_err=0;
-	//int else1=0;
-	//int else2=0;
+	sem_post(&lcore_c_prepared);
+	sem_wait(&lcore_receive_prepared);
 
 	while (!force_quit)
 	{
-		if (rte_ring_mc_dequeue(ring_recieve, e) < 0)
+		if (rte_ring_mc_dequeue(ring_receive, e) < 0)
 			;
-		//printf("!\n");
 		else
 		{
-			cnt = 0;
-
-			adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
-			adcnt += 38;
-			data_length = ((*adcnt) << 8) + (*(adcnt + 1)) - 8;
-			adcnt += 4;
-			//for(cnt=0;cnt<data_length;cnt++)
-			//	data_recieved[cnt]=*adcnt++;
-
-			data_vld = *(adcnt);
-			//pack_hd=*(adcnt+1);
-			pack_hd = ((*(adcnt + 1)) << 8) + (*(adcnt + 2));
-			//pack_idx=*(adcnt+3);
-			pack_idx = ((*(adcnt + 3)) << 8) + (*(adcnt + 4));
-			//packet_len=*(adcnt+5);
-			packet_len = ((*(adcnt + 5)) << 8) + (*(adcnt + 6));
-			send_en = *(adcnt + 7);
-
-			if (data_vld) //如果包有效
-			{
-				if ((pack_hd == 0x0B0E) && (pack_idx == 0x0000)) //新的一组包来了
-				{
-					pack_err += pack_idx + 0x0180 - pre_pack_idx;
-					pre_pack_hd = 0x0B0E;
-					pre_pack_idx = 0x0000;
-					new_group = 0x01;
-				}
-				else if ((new_group == 0x01) && (pack_hd == 0x0000)) //新的一组包的中间的包
-				{
-					pack_err += pack_idx - pre_pack_idx;
-					pre_pack_hd = pack_hd;
-					pre_pack_idx = pack_idx;
-					new_group = 0x01;
-				}
-				else if ((pack_hd == 0x0E0D) && (pack_idx == 0x0180)) //新的一组包的最后一个包
-				{
-					pack_err += pack_idx - pre_pack_idx;
-					pre_pack_hd = 0x0E0D;
-					pre_pack_idx = 0x0180;
-					new_group = 0x00;
-				}
-
-				else //出错了
-				{
-					else1++;
-					//printf("%02X\n",data_vld);
-					//printf("%04X\n",pack_hd);
-					//printf("%04X\n",pack_idx);
-					//printf("%04X\n",packet_len);
-					//printf("%02X\n",send_en);
-				}
-
-				/*{
-					pre_pack_hd=0x0E0D;
-					pre_pack_idx=0xFFFF;
-					new_group=0x00;
-					pack_err++;					
-				}*/
-			}
-			else //无效包
-				else2++;
-
-			/*
-			for(cnt=0;cnt<data_length;cnt+=sizeof(int8_t))
-			{					
-				fprintf(fp,"%d\n", *(int8_t*)adcnt);
-				adcnt+=sizeof(int8_t);		
-			}
-			*/
+			// adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
+			// adcnt += 42;
+			// if (*adcnt == SENDABLE_FLAG)
+			// {
+			pthread_mutex_lock(&mutex_send_token);
+			send_token++;
+			pthread_mutex_unlock(&mutex_send_token);
+			// }
 			rte_pktmbuf_free(*(struct rte_mbuf **)e);
-			int p = 0;
-			//for(p=0;p<data_length;p++)printf("%d %x\n",p,data_recieved[p]);
 		}
 	}
-	fclose(fp);
+	// 结束后叫醒
+	// sem_post(&sendable_sem);
 }
+
 static int
 l2fwd_launch_one_lcore_send(__attribute__((unused)) void *dummy)
 {
@@ -897,19 +854,21 @@ l2fwd_launch_one_lcore_send(__attribute__((unused)) void *dummy)
 	return 0;
 }
 static int
-l2fwd_launch_one_lcore_recieve(__attribute__((unused)) void *dummy)
+l2fwd_launch_one_lcore_receive(__attribute__((unused)) void *dummy)
 {
-	l2fwd_main_loop_recieve();
+	l2fwd_main_loop_receive();
 	return 0;
 }
+static int
 l2fwd_launch_one_lcore_p(__attribute__((unused)) void *dummy)
 {
-	l2fwd_main_p();
+	l2fwd_main_producer();
 	return 0;
 }
+static int
 l2fwd_launch_one_lcore_c(__attribute__((unused)) void *dummy)
 {
-	l2fwd_main_c();
+	l2fwd_main_consumer();
 	return 0;
 }
 
@@ -991,6 +950,7 @@ signal_handler(int signum)
 
 int main(int argc, char **argv)
 {
+	// sendable = 1;
 	int ret;
 	uint8_t nb_ports;
 	uint8_t portid;
@@ -1011,25 +971,24 @@ int main(int argc, char **argv)
 	timer_period *= rte_get_timer_hz();
 
 	/* create the mbuf pool */
-	l2fwd_pktmbuf_pool =
-		rte_pktmbuf_pool_create("mbuf_pool", NB_MBUF,
-								MEMPOOL_CACHE_SIZE, 0,
-								RTE_MBUF_DEFAULT_BUF_SIZE,
-								rte_socket_id());
+	l2fwd_pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool", NB_MBUF,
+												 MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
+												 rte_socket_id());
 	printf("RTE_MBUF_DEFAULT_BUF_SIZE:%d\n", RTE_MBUF_DEFAULT_BUF_SIZE);
 	if (l2fwd_pktmbuf_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init mbuf pool\n");
 	printf("mempool init done\n");
 
+	/* create ring */
 	ring_send = rte_ring_create("RING_SEND", 1024, rte_socket_id(), 0);
 	if (ring_send == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init ring_send\n");
 	printf("ring_send create done\n");
 
-	ring_recieve = rte_ring_create("RING_RECIEVE", 1024, rte_socket_id(), 0);
-	if (ring_recieve == NULL)
-		rte_exit(EXIT_FAILURE, "Cannot init ring_recieve\n");
-	printf("ring_recieve create done\n");
+	ring_receive = rte_ring_create("RING_receive", 1024, rte_socket_id(), 0);
+	if (ring_receive == NULL)
+		rte_exit(EXIT_FAILURE, "Cannot init ring_receive\n");
+	printf("ring_receive create done\n");
 
 	//check ethernet ports
 	nb_ports = rte_eth_dev_count();
@@ -1110,13 +1069,55 @@ int main(int argc, char **argv)
 
 	check_all_ports_link_status(1, 0x1);
 
+	/* 初始化信号量 */
+	sem_init(&lcore_send_prepared, 0, 0);
+	sem_init(&lcore_receive_prepared, 0, 0);
+	sem_init(&lcore_p_prepared, 0, 0);
+	sem_init(&lcore_c_prepared, 0, 0);
+
+	/* 初始化互斥锁 */
+	pthread_mutex_init(&mutex1_tx, NULL);
+	pthread_mutex_init(&mutex2_tx, NULL);
+	pthread_mutex_init(&mutex1_rx, NULL);
+	pthread_mutex_init(&mutex2_rx, NULL);
+	pthread_mutex_init(&mutex3_rx, NULL);
+
+	pthread_mutex_init(&mutex_send_token, NULL);
+
+	/* for TaskScheduler */
+	/* 初始化信号量 */
+	sem_init(&tx_can_be_destroyed, 0, 0);
+	sem_init(&rx_can_be_destroyed, 0, 0);
+	// sem_init(&tx_buff_can_be_destroyed, 0, 0);
+	// sem_init(&rx_buff_can_be_destroyed, 0, 0);
+	sem_init(&tx_prepared, 0, 0);
+	sem_init(&rx_prepared, 0, 0);
+	// sem_init(&tx_buff_prepared, 0, 0);
+	// sem_init(&rx_buff_prepared, 0, 0);
+	sem_init(&cache_tx, 0, 0);
+	// sem_init(&cache_rx, 0, 0);
+	// sem_init(&buff_full, 0, 0);
+
+	/* 初始化线程池 */
+	pool_init(0, 1, 0);
+	printf("creat pool 0...\n");
+	pool_init(1, threadNum_tx, 2);
+	printf("creat pool 2...\n");
+	// pool_init(1 + threadNum_tx, 1, 4);
+	// printf("creat pool 4...\n");
+
+	/* 添加发送端主任务 */
+	pool_add_task(TaskScheduler_tx, NULL, 0);
+	printf("add Tx TaskScheduler to pool 0...\n");
+
 	ret = 0;
+
 	/* launch tasks on lcore */
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_c, NULL, 1);
-	rte_eal_remote_launch(l2fwd_launch_one_lcore_recieve, NULL, 2);
-	sleep(10);
+	rte_eal_remote_launch(l2fwd_launch_one_lcore_receive, NULL, 2);
+	// sleep(10);
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_p, NULL, 3);
-	sleep(3);
+	// sleep(3);
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_send, NULL, 4);
 
 	RTE_LCORE_FOREACH_SLAVE(lcore_id)
@@ -1128,33 +1129,30 @@ int main(int argc, char **argv)
 		}
 	}
 
-	// FILE *fp;
-	// FILE *fpp;
-	// struct rte_mbuf *m;
-	// m=rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
-
-	// uint8_t * adcnt;
-
-	// for(adcnt=(uint8_t*)m->buf_addr;adcnt<(uint8_t*)rte_pktmbuf_mtod(m,uint8_t*);adcnt++)
-	// 	*adcnt=0xaa;
-	// for(adcnt=rte_pktmbuf_mtod(m,uint8_t*);adcnt<rte_pktmbuf_mtod(m,uint8_t*)+m->data_len;adcnt++)
-	// 	*adcnt=0xaa;
-	// for(adcnt=rte_pktmbuf_mtod(m,uint8_t*)+m->data_len;adcnt<(uint8_t*)m->buf_addr+m->buf_len;adcnt++)
-	// 	*adcnt=0xaa;
-
-	// fp=fopen("status","w");
-	// struct rte_ring *r = rte_ring_create("MY_RING", 1024,rte_socket_id(), 0);
-	// rte_ring_dump (fp, r);
-	// rte_ring_mp_enqueue(r,m);
-	// rte_ring_dump (fp, r);
-	// rte_ring_mc_dequeue(r,e);
-	// rte_ring_dump (fp, r);
-	// fclose(fp);
-	// print_mbuf_send(*(struct rte_mbuf **)e,fpp);
-	// rte_pktmbuf_free(*(struct rte_mbuf **)e);
-	// print_mbuf_send(*(struct rte_mbuf **)e,fpp);
-
 	portid = 0;
+
+	/* 等待信号销毁线程 */
+	sem_wait(&tx_can_be_destroyed);
+	pool_destroy(0);
+	// sem_wait(&rx_can_be_destroyed);
+	// pool_destroy(1);
+	// sem_wait(&tx_buff_can_be_destroyed);
+	// pool_destroy(4);
+	// sem_wait(&rx_buff_can_be_destroyed);
+	// pool_destroy(5);
+
+	/* 销毁信号量*/
+	sem_destroy(&tx_can_be_destroyed);
+	// sem_destroy(&rx_can_be_destroyed);
+	// sem_destroy(&tx_buff_can_be_destroyed);
+	// sem_destroy(&rx_buff_can_be_destroyed);
+	sem_destroy(&tx_prepared);
+	// sem_destroy(&rx_prepared);
+	sem_destroy(&tx_buff_prepared);
+	// sem_destroy(&rx_buff_prepared);
+	sem_destroy(&cache_tx);
+	// sem_destroy(&cache_rx);
+	// sem_destroy(&buff_full);
 
 	printf("Closing port %d...", portid);
 	rte_eth_dev_stop(portid);
@@ -1163,6 +1161,6 @@ int main(int argc, char **argv)
 
 	printf("Bye...\n");
 	print_stats();
-	printf("else1=%d,else2=%d\n", else1, else2);
+	// printf("else1=%d,else2=%d\n", else1, else2);
 	return ret;
 }
