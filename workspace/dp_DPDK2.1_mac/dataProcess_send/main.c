@@ -111,11 +111,12 @@ volatile bool force_quit;
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
-#define NB_MBUF 8192
 #define MBUFF_DATA_LENGTH 1200
 #define SEG_SIZE 1792
 
 // uint8_t *data_to_be_sent;
+
+#define NB_MBUF 8192
 
 #define MAX_PKT_BURST 32
 #define BURST_TX_DRAIN_US 4 /* TX drain every ~100us */
@@ -577,7 +578,8 @@ l2fwd_main_loop_send(void)
 		 * TX burst queue drain
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
-		if (unlikely((diff_tsc > drain_tsc)) && (send_token > 0))
+		if (unlikely(diff_tsc > drain_tsc) && (send_token > 0))
+		// if (unlikely(diff_tsc > drain_tsc))
 		{
 			portid = 0;
 			buffer = tx_buffer[portid];
@@ -592,7 +594,7 @@ l2fwd_main_loop_send(void)
 				send_token--;
 				pthread_mutex_unlock(&mutex_send_token);
 				// printf("send_token:%d", send_token);
-				// print_mbuf_send(*(struct rte_mbuf **)e);
+				print_mbuf_send(*(struct rte_mbuf **)e);
 				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
 				port_statistics[portid].tx += sent;
 				rte_pktmbuf_free(*(struct rte_mbuf **)e);
@@ -650,9 +652,12 @@ l2fwd_main_loop_receive(void)
 		// {
 		for (j = 0; j < nb_rx; j++)
 		{
-			// print_mbuf_receive(pkts_burst[j]);
-			rte_ring_mp_enqueue(ring_receive, pkts_burst[j]);
-			//rte_pktmbuf_free(pkts_burst[j]);
+			print_mbuf_receive(pkts_burst[j]);
+			pthread_mutex_lock(&mutex_send_token);
+			send_token = SEND_TOKEN_INIT;
+			pthread_mutex_unlock(&mutex_send_token);
+			// rte_ring_mp_enqueue(ring_receive, pkts_burst[j]);
+			rte_pktmbuf_free(pkts_burst[j]);
 			package_received++;
 			if (force_quit)
 				break;
@@ -738,7 +743,9 @@ l2fwd_main_producer(void)
 			sem_wait(&cache_tx);
 		// if (rte_ring_full(ring_send))
 		// 	printf("!");
-		if ((!rte_ring_full(ring_send)) && likely(readyNum_tx > 0))
+		// if ((!rte_ring_full(ring_send)) && readyNum_tx > 0)
+		if ((rte_ring_count(ring_send) < 1024) && readyNum_tx > 0)
+		// if (rte_ring_empty(ring_send) && readyNum_tx > 0)
 		{
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 			if (m == NULL)
@@ -837,7 +844,7 @@ l2fwd_main_consumer(void)
 			// if (*adcnt == SENDABLE_FLAG)
 			// {
 			pthread_mutex_lock(&mutex_send_token);
-			send_token++;
+			send_token = SEND_TOKEN_INIT;
 			pthread_mutex_unlock(&mutex_send_token);
 			// }
 			rte_pktmbuf_free(*(struct rte_mbuf **)e);

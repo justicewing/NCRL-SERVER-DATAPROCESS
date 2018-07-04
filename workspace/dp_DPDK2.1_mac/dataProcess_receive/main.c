@@ -92,6 +92,7 @@ int feedbackable;
 
 #define SENDABLE_FLAG 0xFF
 #define SEND_TOKEN_INIT 0
+#define SEND_TOKEN_MAX 1
 
 int sendable;
 int send_token = SEND_TOKEN_INIT;
@@ -685,7 +686,7 @@ l2fwd_main_loop_send(void)
 		 * TX burst queue drain
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
-		if (unlikely((diff_tsc > drain_tsc)) && send_token > 0)
+		if (unlikely((diff_tsc > drain_tsc)) && send_token >= SEND_TOKEN_MAX)
 		{
 			portid = 0;
 			buffer = tx_buffer[portid];
@@ -698,9 +699,9 @@ l2fwd_main_loop_send(void)
 			{
 				// sem_post(&send_ring_is_not_full);
 				pthread_mutex_lock(&mutex_send_token);
-				send_token--;
+				send_token = 0;
 				pthread_mutex_unlock(&mutex_send_token);
-				// print_mbuf_send(*(struct rte_mbuf **)e);
+				print_mbuf_send(*(struct rte_mbuf **)e);
 				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
 				port_statistics[portid].tx += sent;
 				rte_pktmbuf_free(*(struct rte_mbuf **)e);
@@ -762,7 +763,7 @@ l2fwd_main_loop_receive(void)
 		// {
 		for (j = 0; j < nb_rx; j++)
 		{
-			// print_mbuf_receive(pkts_burst[j]);
+			print_mbuf_receive(pkts_burst[j]);
 			rte_ring_mp_enqueue(ring_receive, pkts_burst[j]);
 			//rte_pktmbuf_free(pkts_burst[j]);
 			package_received++;
@@ -855,6 +856,8 @@ l2fwd_main_producer(void)
 		// if (rte_ring_full(ring_send))
 		// sem_wait(&send_ring_is_not_full);
 		if (!rte_ring_full(ring_send))
+		// if (rte_ring_count(ring_send) < 1024)
+		// if (rte_ring_empty(ring_send))
 		{
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 			if (m == NULL)

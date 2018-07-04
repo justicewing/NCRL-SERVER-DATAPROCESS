@@ -100,7 +100,7 @@ extern pthread_mutex_t mutex_startNum_tx;
 extern struct package_t package_tx[PACK_CACHE];
 
 #define SENDABLE_FLAG 0xFF
-#define SEND_TOKEN_INIT 500
+#define SEND_TOKEN_INIT 1
 
 int sendable;
 int send_token = SEND_TOKEN_INIT;
