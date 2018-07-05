@@ -97,6 +97,9 @@ int feedbackable;
 int sendable;
 int send_token = SEND_TOKEN_INIT;
 pthread_mutex_t mutex_send_token;
+volatile int send_allowance;
+volatile int send_flag;
+// pthread_mutex_t mutex_send_flag;
 
 volatile bool force_quit;
 
@@ -686,7 +689,8 @@ l2fwd_main_loop_send(void)
 		 * TX burst queue drain
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
-		if (unlikely((diff_tsc > drain_tsc)) && send_token >= SEND_TOKEN_MAX)
+		// if (unlikely((diff_tsc > drain_tsc)) && send_token >= SEND_TOKEN_MAX)
+		if (unlikely(diff_tsc > drain_tsc))
 		{
 			portid = 0;
 			buffer = tx_buffer[portid];
@@ -698,9 +702,9 @@ l2fwd_main_loop_send(void)
 			else
 			{
 				// sem_post(&send_ring_is_not_full);
-				pthread_mutex_lock(&mutex_send_token);
-				send_token = 0;
-				pthread_mutex_unlock(&mutex_send_token);
+				// pthread_mutex_lock(&mutex_send_token);
+				// send_token = 0;
+				// pthread_mutex_unlock(&mutex_send_token);
 				print_mbuf_send(*(struct rte_mbuf **)e);
 				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
 				port_statistics[portid].tx += sent;
@@ -791,7 +795,7 @@ l2fwd_main_producer(void)
 	uint16_t pcnt = 0;
 	int indx_seg = 0;
 
-	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * 1);
+	data_to_be_sent = (uint8_t *)malloc(sizeof(uint8_t) * 2);
 	data_to_be_sent[0] = SENDABLE_FLAG;
 
 	uint8_t flag = SENDABLE_FLAG;
@@ -847,17 +851,40 @@ l2fwd_main_producer(void)
 	mhdr.type1 = 0x00;
 
 	// sem_init(&send_ring_is_not_full, 0, 0);
+	send_flag = 0;
+	send_allowance = 1;
 
 	sem_post(&lcore_p_prepared);
 	sem_wait(&lcore_send_prepared);
 
 	while (!force_quit)
 	{
+		if (send_allowance == 1 && rte_ring_count(ring_receive) > 1000)
+		{
+			send_allowance = 0;
+			send_flag = 1;
+		}
+		else if (send_allowance == 0 && rte_ring_count(ring_receive) == 0)
+		{
+			send_allowance = 1;
+			send_flag = 1;
+		}
+		// else if (rte_ring_empty(ring_receive))
+		// {
+		// 	send_allowance = 1;
+		// 	send_flag = 1;
+		// }
+		else if (rte_ring_count(ring_receive) > 1000)
+		{
+			send_allowance = 0;
+			send_flag = 1;
+		}
+		send_flag = 0;
 		// if (rte_ring_full(ring_send))
 		// sem_wait(&send_ring_is_not_full);
-		if (!rte_ring_full(ring_send))
-		// if (rte_ring_count(ring_send) < 1024)
+		// if (rte_ring_count(ring_send) < 1)
 		// if (rte_ring_empty(ring_send))
+		if (!rte_ring_full(ring_send) && send_flag)
 		{
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 			if (m == NULL)
@@ -865,8 +892,9 @@ l2fwd_main_producer(void)
 				printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 				continue;
 			}
-
-			package(mhdr, ihdr, uhdr, data_to_be_sent, 8, m);
+			data_to_be_sent[1] = send_allowance;
+			package(mhdr, ihdr, uhdr, data_to_be_sent, 2, m);
+			send_flag = 0;
 			while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
 				; //printf("p!\n");
 
@@ -917,8 +945,12 @@ l2fwd_main_consumer(void)
 				;
 			else
 			{
-				adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
+				pthread_mutex_lock(&mutex_send_token);
+				send_token++;
+				// count_send_token++;
+				pthread_mutex_unlock(&mutex_send_token);
 
+				adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
 				// pthread_mutex_lock(&mutex_startNum_rx);
 				// startNum_rx++;
 				// pthread_mutex_unlock(&mutex_startNum_rx);
@@ -935,10 +967,7 @@ l2fwd_main_consumer(void)
 				// 	sem_post(&sem_buff_full);
 				// 	printf("DPDK_pkg_cnt:%d\n", pkg_cnt++);
 				// }
-				pthread_mutex_lock(&mutex_send_token);
-				send_token++;
-				// count_send_token++;
-				pthread_mutex_unlock(&mutex_send_token);
+
 				// printf("send_token:%d\n",send_token);
 				// printf("count_send_token:%d\n",count_send_token);
 				rte_pktmbuf_free(*(struct rte_mbuf **)e);
@@ -1186,6 +1215,8 @@ int main(int argc, char **argv)
 	pthread_mutex_init(&mutex1_rx, NULL);
 	pthread_mutex_init(&mutex2_rx, NULL);
 	pthread_mutex_init(&mutex3_rx, NULL);
+	pthread_mutex_init(&mutex_send_token, NULL);
+	// pthread_mutex_init(&mutex_send_flag, NULL);
 
 	/* 初始化信号量 */
 	sem_init(&tx_can_be_destroyed, 0, 0);

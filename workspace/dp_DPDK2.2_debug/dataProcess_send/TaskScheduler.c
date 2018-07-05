@@ -674,6 +674,8 @@ void TaskScheduler_rx(void *arg)
 {
 
 	//--------------------Initialize parameters--------------------
+	pthread_mutex_init(&mutex_readyNum_rx, NULL);
+	pthread_mutex_init(&mutex_startNum_rx, NULL);
 	//-----simulation-----
 	index_rx_read = 0;
 	for (int p = 0; p < PACK_CACHE; p++)
@@ -1405,8 +1407,6 @@ void Rx_buff(void *arg)
 {
 	// rx_buff_file = fopen("Rx_buff_log.txt", "w");
 	readyNum_rx = 0, startNum_rx = 0;
-	pthread_mutex_init(&mutex_readyNum_rx, NULL);
-	pthread_mutex_init(&mutex_startNum_rx, NULL);
 	index_rx_write = 0;
 	// printf("rx buff start\n");
 	printf("Rx Buff prepared...\n");
