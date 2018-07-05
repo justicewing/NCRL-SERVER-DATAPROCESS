@@ -686,28 +686,29 @@ l2fwd_main_loop_send(void)
 		 * TX burst queue drain
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
-		if (unlikely((diff_tsc > drain_tsc)) && send_token >= SEND_TOKEN_MAX)
+		// if (unlikely((diff_tsc > drain_tsc)) && send_token >= SEND_TOKEN_MAX)
+		if (unlikely(diff_tsc > drain_tsc))
 		{
 			portid = 0;
 			buffer = tx_buffer[portid];
 
-			// for (j = 0; j < 4; j++)
-			// {
-			if (rte_ring_mc_dequeue(ring_send, e) < 0)
-				;
-			else
+			for (j = 0; j < 4; j++)
 			{
-				// sem_post(&send_ring_is_not_full);
-				pthread_mutex_lock(&mutex_send_token);
-				send_token = 0;
-				pthread_mutex_unlock(&mutex_send_token);
-				print_mbuf_send(*(struct rte_mbuf **)e);
-				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
-				port_statistics[portid].tx += sent;
-				rte_pktmbuf_free(*(struct rte_mbuf **)e);
-				e = &d;
+				if (rte_ring_mc_dequeue(ring_send, e) < 0)
+					;
+				else
+				{
+					// sem_post(&send_ring_is_not_full);
+					// pthread_mutex_lock(&mutex_send_token);
+					// send_token = 0;
+					// pthread_mutex_unlock(&mutex_send_token);
+					print_mbuf_send(*(struct rte_mbuf **)e);
+					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
+					port_statistics[portid].tx += sent;
+					rte_pktmbuf_free(*(struct rte_mbuf **)e);
+					e = &d;
+				}
 			}
-			// }
 			sent = rte_eth_tx_buffer_flush(portid, 0, buffer);
 			port_statistics[portid].tx += sent;
 
@@ -855,10 +856,14 @@ l2fwd_main_producer(void)
 	{
 		// if (rte_ring_full(ring_send))
 		// sem_wait(&send_ring_is_not_full);
-		if (!rte_ring_full(ring_send))
+		// if (!rte_ring_full(ring_send))
 		// if (rte_ring_count(ring_send) < 1024)
 		// if (rte_ring_empty(ring_send))
+		if (send_token > 0)
 		{
+			pthread_mutex_lock(&mutex_send_token);
+			send_token--;
+			pthread_mutex_unlock(&mutex_send_token);
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 			if (m == NULL)
 			{

@@ -578,29 +578,29 @@ l2fwd_main_loop_send(void)
 		 * TX burst queue drain
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
-		if (unlikely(diff_tsc > drain_tsc) && (send_token > 0))
+		if (unlikely(diff_tsc > drain_tsc))
 		// if (unlikely(diff_tsc > drain_tsc))
 		{
 			portid = 0;
 			buffer = tx_buffer[portid];
 
-			// for (j = 0; j < 4; j++)
-			// {
-			if (rte_ring_mc_dequeue(ring_send, e) < 0)
-				;
-			else
+			for (j = 0; j < 4; j++)
 			{
-				pthread_mutex_lock(&mutex_send_token);
-				send_token--;
-				pthread_mutex_unlock(&mutex_send_token);
-				// printf("send_token:%d", send_token);
-				print_mbuf_send(*(struct rte_mbuf **)e);
-				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
-				port_statistics[portid].tx += sent;
-				rte_pktmbuf_free(*(struct rte_mbuf **)e);
-				e = &d;
+				if (rte_ring_mc_dequeue(ring_send, e) < 0)
+					;
+				else
+				{
+					// pthread_mutex_lock(&mutex_send_token);
+					// send_token--;
+					// pthread_mutex_unlock(&mutex_send_token);
+					// printf("send_token:%d", send_token);
+					print_mbuf_send(*(struct rte_mbuf **)e);
+					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
+					port_statistics[portid].tx += sent;
+					rte_pktmbuf_free(*(struct rte_mbuf **)e);
+					e = &d;
+				}
 			}
-			// }
 			sent = rte_eth_tx_buffer_flush(portid, 0, buffer);
 			port_statistics[portid].tx += sent;
 
@@ -744,9 +744,13 @@ l2fwd_main_producer(void)
 		// if (rte_ring_full(ring_send))
 		// 	printf("!");
 		// if ((!rte_ring_full(ring_send)) && readyNum_tx > 0)
-		if ((rte_ring_count(ring_send) < 1024) && readyNum_tx > 0)
+		// if ((rte_ring_count(ring_send) < 1024) && readyNum_tx > 0)
 		// if (rte_ring_empty(ring_send) && readyNum_tx > 0)
+		if (readyNum_tx > 0 && send_token > 0)
 		{
+			pthread_mutex_lock(&mutex_send_token);
+			send_token--;
+			pthread_mutex_unlock(&mutex_send_token);
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 			if (m == NULL)
 			{
@@ -843,9 +847,9 @@ l2fwd_main_consumer(void)
 			// adcnt += 42;
 			// if (*adcnt == SENDABLE_FLAG)
 			// {
-			pthread_mutex_lock(&mutex_send_token);
-			send_token = SEND_TOKEN_INIT;
-			pthread_mutex_unlock(&mutex_send_token);
+			// pthread_mutex_lock(&mutex_send_token);
+			// send_token++;
+			// pthread_mutex_unlock(&mutex_send_token);
 			// }
 			rte_pktmbuf_free(*(struct rte_mbuf **)e);
 		}

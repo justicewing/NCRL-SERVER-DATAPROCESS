@@ -1,4 +1,4 @@
-//版本号:2.1
+//版本号:2.2
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,6 +40,13 @@
 #include <rte_ethdev.h>
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
+
+#include <strings.h>
+#include <assert.h>
+#include <unistd.h>
+#include <math.h>
+#include <time.h>
+#include <complex.h>
 #include "mkl.h"
 #include "thread_pool.h"
 #include "srslte/fec/cbsegm.h"
@@ -95,7 +102,7 @@ int feedbackable;
 #define SEND_TOKEN_MAX 1
 
 int sendable;
-int send_token = SEND_TOKEN_INIT;
+volatile int send_token = SEND_TOKEN_INIT;
 pthread_mutex_t mutex_send_token;
 volatile int send_allowance;
 volatile int send_flag;
@@ -495,10 +502,10 @@ int depackage(struct package_t *pkg_rx, uint8_t *adcnt)
 		err_flag = 1;
 	// printf("%d", err_flag);
 
-	FILE *fpy = fopen("type_num.txt", "a");
-	fprintf(fpy, "%4d,%4d;%4d,%4d;%4d;%4d\n",
-			type, num, type_pre, num_pre, err_flag, length);
-	fclose(fpy);
+	// FILE *fpy = fopen("type_num.txt", "a");
+	// fprintf(fpy, "%4d,%4d;%4d,%4d;%4d;%4d\n",
+	// 		type, num, type_pre, num_pre, err_flag, length);
+	// fclose(fpy);
 
 	if (type != type_pre || num != num_pre)
 		err_count++;
@@ -695,23 +702,23 @@ l2fwd_main_loop_send(void)
 			portid = 0;
 			buffer = tx_buffer[portid];
 
-			// for (j = 0; j < 4; j++)
-			// {
-			if (rte_ring_mc_dequeue(ring_send, e) < 0)
-				;
-			else
+			for (j = 0; j < 4; j++)
 			{
-				// sem_post(&send_ring_is_not_full);
-				// pthread_mutex_lock(&mutex_send_token);
-				// send_token = 0;
-				// pthread_mutex_unlock(&mutex_send_token);
-				print_mbuf_send(*(struct rte_mbuf **)e);
-				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
-				port_statistics[portid].tx += sent;
-				rte_pktmbuf_free(*(struct rte_mbuf **)e);
-				e = &d;
+				if (rte_ring_mc_dequeue(ring_send, e) < 0)
+					;
+				else
+				{
+					// sem_post(&send_ring_is_not_full);
+					// pthread_mutex_lock(&mutex_send_token);
+					// send_token = 0;
+					// pthread_mutex_unlock(&mutex_send_token);
+					// print_mbuf_send(*(struct rte_mbuf **)e);
+					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
+					port_statistics[portid].tx += sent;
+					rte_pktmbuf_free(*(struct rte_mbuf **)e);
+					e = &d;
+				}
 			}
-			// }
 			sent = rte_eth_tx_buffer_flush(portid, 0, buffer);
 			port_statistics[portid].tx += sent;
 
@@ -767,7 +774,7 @@ l2fwd_main_loop_receive(void)
 		// {
 		for (j = 0; j < nb_rx; j++)
 		{
-			print_mbuf_receive(pkts_burst[j]);
+			// print_mbuf_receive(pkts_burst[j]);
 			rte_ring_mp_enqueue(ring_receive, pkts_burst[j]);
 			//rte_pktmbuf_free(pkts_burst[j]);
 			package_received++;
@@ -859,33 +866,37 @@ l2fwd_main_producer(void)
 
 	while (!force_quit)
 	{
-		if (send_allowance == 1 && rte_ring_count(ring_receive) > 1000)
-		{
-			send_allowance = 0;
-			send_flag = 1;
-		}
-		else if (send_allowance == 0 && rte_ring_count(ring_receive) == 0)
-		{
-			send_allowance = 1;
-			send_flag = 1;
-		}
-		// else if (rte_ring_empty(ring_receive))
+		// if (send_allowance == 1 && rte_ring_count(ring_receive) > 1000)
+		// {
+		// 	send_allowance = 0;
+		// 	send_flag = 1;
+		// }
+		// else if (send_allowance == 0 && rte_ring_count(ring_receive) == 0)
 		// {
 		// 	send_allowance = 1;
 		// 	send_flag = 1;
 		// }
-		else if (rte_ring_count(ring_receive) > 1000)
-		{
-			send_allowance = 0;
-			send_flag = 1;
-		}
+		// // else if (rte_ring_empty(ring_receive))
+		// // {
+		// // 	send_allowance = 1;
+		// // 	send_flag = 1;
+		// // }
+		// else if (rte_ring_count(ring_receive) > 1000)
+		// {
+		// 	send_allowance = 0;
+		// 	send_flag = 1;
+		// }
 		send_flag = 0;
 		// if (rte_ring_full(ring_send))
 		// sem_wait(&send_ring_is_not_full);
 		// if (rte_ring_count(ring_send) < 1)
 		// if (rte_ring_empty(ring_send))
-		if (!rte_ring_full(ring_send) && send_flag)
+		// if (!rte_ring_full(ring_send) && send_flag)
+		if (send_token > 0)
 		{
+			pthread_mutex_lock(&mutex_send_token);
+			send_token--;
+			pthread_mutex_unlock(&mutex_send_token);
 			m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 			if (m == NULL)
 			{
@@ -945,10 +956,6 @@ l2fwd_main_consumer(void)
 				;
 			else
 			{
-				pthread_mutex_lock(&mutex_send_token);
-				send_token++;
-				// count_send_token++;
-				pthread_mutex_unlock(&mutex_send_token);
 
 				adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
 				// pthread_mutex_lock(&mutex_startNum_rx);
@@ -956,6 +963,11 @@ l2fwd_main_consumer(void)
 				// pthread_mutex_unlock(&mutex_startNum_rx);
 
 				depackage(&package_rx[index_rx_write], adcnt);
+
+				pthread_mutex_lock(&mutex_send_token);
+				send_token++;
+				// count_send_token++;
+				pthread_mutex_unlock(&mutex_send_token);
 
 				// indx_seg++;
 				// if (indx_seg >= SEG_SIZE)

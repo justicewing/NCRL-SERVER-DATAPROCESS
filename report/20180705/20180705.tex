@@ -63,6 +63,8 @@
 
 1. 研究丢包误包问题
 
+2. 暂时解决丢包误包问题
+
 %===========第一节=================
 \section{添加包头后的结果}
 
@@ -91,26 +93,23 @@
 	\caption{包被覆盖时地址相同}
 \end{figure}
 
-% %===========第三节=================
-% \section{仍存在的问题}
-% 丢包问题严重：\\
-% 大约平均每1000个包就会存在一次丢包\\
-% 原因未知
-% \begin{figure}[H]
-% 	\centering
-% 	\includegraphics[width = \textwidth]{frame_token.pdf}
-% 	\caption{基于令牌的流量控制系统}
-% \end{figure}
-% \begin{figure}[H]
-% 	\centering
-% 	\includegraphics[width = .8\textwidth]{result_drop_send.png}
-% 	\caption{发送端结果}
-% \end{figure}
-% \begin{figure}[H]
-% 	\centering
-% 	\includegraphics[width = .8\textwidth]{result_drop_receive.png}
-% 	\caption{接收端结果}
-% \end{figure}
+%===========第三节=================
+\section{修改流量控制方式}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{frame_token.pdf}
+	\caption{基于令牌的流量控制系统}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .6\textwidth]{flow_traffic.pdf}
+	\caption{原流量控制系统}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{result-oldtc.png}
+	\caption{改回原流量控制系统后的结果}
+\end{figure}
 
 %===========第四节=================
 % \section{其他改进方向}
