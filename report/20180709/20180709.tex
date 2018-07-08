@@ -128,12 +128,12 @@ iterations allowed.\\
 P(v_n=1|y_n))$ for $1\leq n\leq N,m\in M(n)$.\\
 3) Update the check nodes, i.e., for $1\leq m\leq M, n\in N(m)$, calculate:
 \begin{equation}
-	\epsilon^{(i)}_{mn}=\min_{n'\in N(m)\textbackslash n}|z^{(i)}_{mn'}|\prod_{n'\in 
-	N(m)\textbackslash n}\mathrm {sgn}(z^{(i)}_{mn'}).
+	\epsilon^{(i)}_{mn}=\min_{n'\in N(m)\backslash n}|z^{(i)}_{mn'}|\prod_{n'\in 
+	N(m)\backslash n}\mathrm {sgn}(z^{(i)}_{mn'}).
 \end{equation}
 4) Update the variable nodes, i.e., for $1\leq n \leq N,m\in M(n)$, calculate:
 \begin{equation}
-	z^{i}_{mn}=\sum_{m'\in M(n)\textbackslash m}\epsilon^{(i)}_{m'n}.
+	z^{i}_{mn}=\sum_{m'\in M(n)\backslash m}\epsilon^{(i)}_{m'n}.
 \end{equation}
 5) Apply a hard decision, i.e., compute $\hat{W}=(\hat{w}_1,\hat{w}_2,...,\hat{w}_N)$
 where element $\hat{w}_n=\left\{\begin{aligned}
