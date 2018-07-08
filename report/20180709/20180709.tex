@@ -121,15 +121,33 @@ the matrix-vector multiplications of (3) have linear complexity.
 	\centering
 	\includegraphics[width = .4\textwidth]{Tanner.png}
 \end{figure}
-% \begin{figure}[H]
-% 	\flushleft
-% 	\includegraphics[width = .6\textwidth]{min-sum.png}
-% \end{figure}
-
 
 1) Initialize the iteration counter, $i$, to 1 and let $I_M$ be the maximum number of 
 iterations allowed.\\
-2) Initialize $z^{(0)}_{mn}$
+2) Initialize $z^{(0)}_{mn}$ to the $a$ posteriori LLR, $\lambda _n=\log(P(v_n=0|y_n)/
+P(v_n=1|y_n))$ for $1\leq n\leq N,m\in M(n)$.\\
+3) Update the check nodes, i.e., for $1\leq m\leq M, n\in N(m)$, calculate:
+\begin{equation}
+	\epsilon^{(i)}_{mn}=\min_{n'\in N(m)\textbackslash n}|z^{(i)}_{mn'}|\prod_{n'\in 
+	N(m)\textbackslash n}\mathrm {sgn}(z^{(i)}_{mn'}).
+\end{equation}
+4) Update the variable nodes, i.e., for $1\leq n \leq N,m\in M(n)$, calculate:
+\begin{equation}
+	z^{i}_{mn}=\sum_{m'\in M(n)\textbackslash m}\epsilon^{(i)}_{m'n}.
+\end{equation}
+5) Apply a hard decision, i.e., compute $\hat{W}=(\hat{w}_1,\hat{w}_2,...,\hat{w}_N)$
+where element $\hat{w}_n=\left\{\begin{aligned}
+	0, & \mathrm{if} \lambda _n+\sum\nolimits_{m\in M(n)}\epsilon^{(i)}_{mn}\geq 0, \\
+	1, & \mathrm{otherwise}.\end{aligned}
+	\right.$\\
+If $\hat{W}H^T=0$ or $i\geq I_M$, stop decoding and go to step 6. Otherwise set 
+$i=i+1$ and go to step 3.\\
+6) Output $\hat{W}^{(i)}$ as the decoder output.
+
+% \begin{figure}[H] 
+% 	\flushleft
+% 	\includegraphics[width = .6\textwidth]{min-sum.png}
+% \end{figure}
 
 %===========第三节=================
 % \section{修改流量控制方式}
