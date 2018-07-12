@@ -46,7 +46,8 @@
         "vector_simd.h": "c",
         "chrono": "c",
         "tuple": "c",
-        "ratio": "c"
+        "ratio": "c",
+        "xstring": "c"
     },
     "matlab-formatter.path": "C:\\Users\\Sherl\\.vscode\\extensions\\AffenWiesel.matlab-formatter-1.1.4\\formatter\\matlab_formatter.py",
     "C_Cpp.errorSquiggles": "Disabled"
