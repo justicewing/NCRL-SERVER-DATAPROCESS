@@ -285,19 +285,17 @@ static int l2fwd_main_loop_send(void)
 			portid = 0;
 			buffer = tx_buffer[portid];
 
-			// for (j = 0; j < 4; j++)
-			// {
-			if (rte_ring_mc_dequeue(ring_send, e) < 0)
-				;
-			else
-			{
-				print_mbuf_send(*(struct rte_mbuf **)e);
-				sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
-				port_statistics[portid].tx += sent;
-				rte_pktmbuf_free(*(struct rte_mbuf **)e);
-				e = &d;
-			}
-			// }
+			for (int j = 0; j < 4; j++)
+				if (rte_ring_mc_dequeue(ring_send, e) < 0)
+					;
+				else
+				{
+					print_mbuf_send(*(struct rte_mbuf **)e);
+					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
+					port_statistics[portid].tx += sent;
+					rte_pktmbuf_free(*(struct rte_mbuf **)e);
+					e = &d;
+				}
 			sent = rte_eth_tx_buffer_flush(portid, 0, buffer);
 			port_statistics[portid].tx += sent;
 
