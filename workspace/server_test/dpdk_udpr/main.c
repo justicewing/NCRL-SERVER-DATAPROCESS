@@ -202,6 +202,8 @@ volatile uint8_t send_en = 0x00; //此变量后面改为全局变量 00停止发
 int pack_err = 0;
 int num_err_pkg = 0;
 int num_data_nvld = 0;
+int correct_BE = 0;
+int correct_ED = 0;
 
 int package(mac_hdr *mhdr, ip_hdr *ihdr,
 			udp_fhdr_hdr *uhdr,
@@ -290,7 +292,7 @@ static int l2fwd_main_loop_send(void)
 					;
 				else
 				{
-					print_mbuf_send(*(struct rte_mbuf **)e);
+					// print_mbuf_send(*(struct rte_mbuf **)e);
 					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
 					port_statistics[portid].tx += sent;
 					rte_pktmbuf_free(*(struct rte_mbuf **)e);
@@ -348,7 +350,7 @@ l2fwd_main_loop_recieve(void)
 		// {
 		for (j = 0; j < nb_rx; j++)
 		{
-			print_mbuf_recieve(pkts_burst[j]);
+			// print_mbuf_recieve(pkts_burst[j]);
 			rte_ring_mp_enqueue(ring_recieve, pkts_burst[j]);
 			//rte_pktmbuf_free(pkts_burst[j]);
 			package_recieved++;
@@ -389,7 +391,7 @@ l2fwd_main_p(void)
 
 	while (!force_quit)
 	{
-		if (unlikely(send_en))
+		if (unlikely(send_en) && 0)
 			if (!rte_ring_full(ring_send))
 			{
 				struct rte_mbuf *m;
@@ -447,9 +449,19 @@ l2fwd_main_c(void)
 				h->pack_len = ((*(adcnt + 7)) << 8) + (*(adcnt + 8));
 				adcnt += 16;
 				if (check_info_pkg_head(h, ph))
+				{
+					if (h->pack_hd == 0x0B0E)
+						correct_BE++;
+					if (h->pack_hd == 0x0E0D)
+						correct_ED++;
 					write_data_pkg(h, adcnt);
+				}
+
 				else
+				{
 					num_err_pkg++;
+					// print_mbuf_recieve(*(struct rte_mbuf **)e);
+				}
 			}
 			else
 				num_data_nvld++;
@@ -731,6 +743,7 @@ int main(int argc, char **argv)
 
 	printf("Bye...\n");
 	print_stats();
-	printf("num_err_pkg=%d,num_data_nvld=%d\n", num_err_pkg, num_data_nvld);
+	printf("num_err_pkg=%d,num_data_nvld=%d,correct_BE=%ld,correct_ED=%ld,incomplete_pkg=%ld\n",
+		   num_err_pkg, num_data_nvld, correct_BE, correct_ED, correct_BE - correct_ED);
 	return ret;
 }

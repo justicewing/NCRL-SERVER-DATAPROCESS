@@ -290,7 +290,7 @@ static int l2fwd_main_loop_send(void)
 					;
 				else
 				{
-					print_mbuf_send(*(struct rte_mbuf **)e);
+					// print_mbuf_send(*(struct rte_mbuf **)e);
 					sent = rte_eth_tx_buffer(portid, 0, buffer, *(struct rte_mbuf **)e);
 					port_statistics[portid].tx += sent;
 					rte_pktmbuf_free(*(struct rte_mbuf **)e);
@@ -348,7 +348,7 @@ l2fwd_main_loop_recieve(void)
 		// {
 		for (j = 0; j < nb_rx; j++)
 		{
-			print_mbuf_recieve(pkts_burst[j]);
+			// print_mbuf_recieve(pkts_burst[j]);
 			rte_ring_mp_enqueue(ring_recieve, pkts_burst[j]);
 			//rte_pktmbuf_free(pkts_burst[j]);
 			package_recieved++;
@@ -381,8 +381,12 @@ l2fwd_main_p(void)
 	ip_hdr ihdr;
 	init_ip_hdr(&ihdr, uhdr.length);
 
-	info_pkg_head_t h;
-	init_ul_info_pkg_head(&h);
+	info_pkg_head_t *h = (info_pkg_head_t *)malloc(sizeof(info_pkg_head_t));
+	h->send_en = 0x01;
+	h->data_vld = 0x01;
+	h->pack_type = 0x00;
+	h->pack_len = 0x0577;
+	// init_ul_info_pkg_head(&h);
 
 	for (int i = 0; i < MAX_PKG_LEN; i++)
 		data_to_be_sent[i] = 0xFF;
@@ -398,7 +402,31 @@ l2fwd_main_p(void)
 					printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 				else
 				{
-					total_length = package(&mhdr, &ihdr, &uhdr, &h, data_to_be_sent, m);
+					switch (packet_num_threw_in_ring % 5)
+					{
+					case 0:
+						h->pack_hd = 0x0B0E;
+						h->pack_idx = 0x0000;
+						break;
+					case 1:
+						h->pack_hd = 0x0000;
+						h->pack_idx = 0x0001;
+						break;
+					case 2:
+						h->pack_hd = 0x0000;
+						h->pack_idx = 0x0002;
+						break;
+					case 3:
+						h->pack_hd = 0x0E0D;
+						h->pack_idx = 0x0003;
+						break;
+					case 4:
+						h->pack_hd = 0x0E0D;
+						h->pack_idx = 0x0004;
+						break;
+					}
+
+					total_length = package(&mhdr, &ihdr, &uhdr, h, data_to_be_sent, m);
 					while ((!force_quit) && (rte_ring_mp_enqueue(ring_send, m) < 0))
 						;
 					packet_num_threw_in_ring++;
