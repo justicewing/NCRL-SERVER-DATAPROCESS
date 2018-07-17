@@ -48,7 +48,6 @@
 \title{组会报告}
 \author{徐益}
 \date{\today}
-
 %%%%%%%%%%%%%%%%%%%%%%%这是导言部分的结束%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%这是正文部分的开始%%%%%%%%%
@@ -62,45 +61,50 @@
 %===========第一节=================
 \section{工作内容}
 
-1. 完成5GNR中LDPC相关的matlab仿真
+1. 实现服务器解包程序
 
-2. 用C语言实现5GNR中的LDPC编译码
+2. 完成基于5GNR编码的各LDPC译码性能研究
 
 %===========第一节=================
-\section{5GNR中LDPC相关的matlab仿真}
-
-\subsection{误码性能仿真}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width = .8\textwidth]{error.eps}
-	\caption{基于min-sum算法的LDPC译码误码性能(错误)}
-\end{figure}
-问题：文献\emph{A Bit-Serial Approximate Min-Sum LDPC Decoder and FPGA Implementation}
-中min-sum算法介绍的变量节点信息更新公式(式(2))缺一项。
+\section{实现服务器解包程序}
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .8\textwidth]{ms.eps}
-	\caption{基于min-sum算法的LDPC译码误码性能(R=11/34)}
+	\includegraphics[width = .6\textwidth]{structure.png}
+	\caption{解包程序实现部分}
 \end{figure}
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .8\textwidth]{pun.eps}
-	\caption{基于打孔的min-sum算法的LDPC译码误码性能}
-\end{figure}
-
-\subsection{其余部分仿真}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width = .8\textwidth]{document.png}
-	\caption{matlab代码说明文档}
+	\includegraphics[width = .6\textwidth]{depack.pdf}
+	\caption{解包程序实现内容}
 \end{figure}
 
 %===========第二节=================
-\section{用C语言实现5GNR中的LDPC编译码}
-遇到问题：稀疏矩阵的数据结构和相关函数。
+\section{基于5GNR编码的各LDPC译码性能研究}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .75\textwidth]{bp_ms_pun.eps}
+	\caption{BP和min-sum译码算法误码性能对比($N=25344,N_p=768$)}
+\end{figure}
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .75\textwidth]{nms.eps}
+	\caption{不同$\alpha$的NMS算法误码性能($N=25344,R=1/3,N_p=768$)}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .75\textwidth]{oms.eps}
+	\caption{不同$\beta$的OMS算法误码性能($N=25344,R=1/3,N_p=768$)}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .75\textwidth]{noms.eps}
+	\caption{当前最优NMS和OMS算法对min-sum误码性能的优化($N=25344,R=1/3,N_p=768$)}
+\end{figure}
 %===========第三节=================
 % \section{修改流量控制方式}
 
@@ -113,7 +117,7 @@
 
 %===========下周计划=================
 \section{下阶段计划}
-继续用C语言实现5GNR中的LDPC编译码
+实现LDPC相关的mex函数
 
 \end{document}
 %%%%%%%%%%%%%%%%%%%%%%%这是正文部分的结束%%%%%%%%%%%%
