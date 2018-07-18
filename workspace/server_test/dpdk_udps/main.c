@@ -402,27 +402,37 @@ l2fwd_main_p(void)
 					printf("mempool已满，mbuf申请失败!%d\n", packet_num_threw_in_ring);
 				else
 				{
-					switch (packet_num_threw_in_ring % 5)
+					switch (packet_num_threw_in_ring % 6)
 					{
 					case 0:
+						h->pack_type = 0xF1;
 						h->pack_hd = 0x0B0E;
 						h->pack_idx = 0x0000;
 						break;
 					case 1:
+						h->pack_type = 0xF2;
+						h->pack_hd = 0x0B0E;
+						h->pack_idx = 0x0000;
+						break;
+					case 2:
+						h->pack_type = 0xF1;
 						h->pack_hd = 0x0000;
 						h->pack_idx = 0x0001;
 						break;
-					case 2:
-						h->pack_hd = 0x0000;
-						h->pack_idx = 0x0002;
-						break;
 					case 3:
-						h->pack_hd = 0x0E0D;
-						h->pack_idx = 0x0003;
+						h->pack_type = 0xF2;
+						h->pack_hd = 0x0000;
+						h->pack_idx = 0x0001;
 						break;
 					case 4:
+						h->pack_type = 0xF1;
 						h->pack_hd = 0x0E0D;
-						h->pack_idx = 0x0004;
+						h->pack_idx = 0x0002;
+						break;
+					case 5:
+						h->pack_type = 0xF2;
+						h->pack_hd = 0x0E0D;
+						h->pack_idx = 0x0002;
 						break;
 					}
 
@@ -679,9 +689,9 @@ int main(int argc, char **argv)
 	/* launch tasks on lcore */
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_c, NULL, 1);
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_recieve, NULL, 2);
-	sleep(10);
+	// sleep(10);
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_p, NULL, 3);
-	sleep(3);
+	// sleep(3);
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_send, NULL, 4);
 
 	RTE_LCORE_FOREACH_SLAVE(lcore_id)

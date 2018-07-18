@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #define INFO_PKG_HEAD_LEN 16
-#define MAX_PKG_LEN 1399
+#define MAX_PKG_LEN 1400
 
 typedef struct
 {

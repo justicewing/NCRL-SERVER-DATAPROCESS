@@ -40,12 +40,13 @@
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
 
+#include <semaphore.h>
 #include "info_pkg_head.h"
 #include "udp_head.h"
 
 static volatile bool force_quit;
 
-#define PKG_LEN (MAX_PKG_LEN + MAC_HEAD_LEN + UDP_HEAD_LEN + IP_HEAD_LEN + INFO_PKG_HEAD_LEN)
+#define PKG_LEN (MAX_PKG_LEN + INFO_PKG_HEAD_LEN)
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
@@ -329,36 +330,65 @@ static int l2fwd_main_loop_send(void)
 	}
 }
 
+#define SIZE_OF_BUFFER 10000
+volatile int read_write_state; // 0:read; 1:write
+uint8_t **buffer;
+sem_t sem_rw;
+
 static void
 l2fwd_main_loop_recieve(void)
 {
+	read_write_state = 0;
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
-	FILE *fp;
-	unsigned lcore_id;
-	unsigned j, portid, nb_rx;
+	unsigned lcore_id, portid, nb_rx;
 	int package_recieved = 0;
-	lcore_id = rte_lcore_id();
-	RTE_LOG(INFO, L2FWD, "entering main loop recieve on lcore  %u\n", lcore_id);
 
-	while (!force_quit)
+	uint8_t *adcnt = NULL;
+	int indx_buffer = 0;
+	buffer = (uint8_t **)malloc(sizeof(uint8_t *) * SIZE_OF_BUFFER);
+	buffer[0] = (uint8_t *)malloc(sizeof(uint8_t) * SIZE_OF_BUFFER * PKG_LEN);
+	for (int i = 1; i < SIZE_OF_BUFFER; i++)
+		buffer[i] = buffer[i - 1] + PKG_LEN;	
+
+	lcore_id = rte_lcore_id();
+	RTE_LOG(INFO, L2FWD, "entering main loop recieve on lcore %u\n", lcore_id);
+
+	while ((!force_quit) && (read_write_state == 0))
 	{
 		portid = 0;
 		nb_rx = rte_eth_rx_burst((uint8_t)portid, 0, pkts_burst, MAX_PKT_BURST);
 
 		port_statistics[portid].rx += nb_rx;
+
 		// if (package_recieved < 400)
-		// {
-		for (j = 0; j < nb_rx; j++)
+		for (int j = 0; j < nb_rx; j++)
 		{
 			// print_mbuf_recieve(pkts_burst[j]);
-			rte_ring_mp_enqueue(ring_recieve, pkts_burst[j]);
-			//rte_pktmbuf_free(pkts_burst[j]);
+			// rte_ring_mp_enqueue(ring_recieve, pkts_burst[j]);
+
+			adcnt = rte_pktmbuf_mtod(pkts_burst[j], uint8_t *);
+			adcnt += 42;
+			memcpy(buffer[indx_buffer], adcnt, PKG_LEN);
+			indx_buffer++;
+			if (indx_buffer >= SIZE_OF_BUFFER)
+			{
+				indx_buffer = 0;
+				read_write_state = 1;
+				sem_post(&sem_rw);
+				for (int i = j; i < nb_rx; i++)
+					rte_pktmbuf_free(pkts_burst[i]);
+				break;
+			}
+
 			package_recieved++;
+			rte_pktmbuf_free(pkts_burst[j]);
 		}
-		// }
 		// else
 		// 	break;
 	}
+	sem_post(&sem_rw);
+	free(buffer[0]);
+	free(buffer);
 }
 
 static void
@@ -366,7 +396,7 @@ l2fwd_main_p(void)
 {
 	unsigned lcore_id;
 	lcore_id = rte_lcore_id();
-	RTE_LOG(INFO, L2FWD, "entering main loop produce on core %u\n", lcore_id);
+	RTE_LOG(INFO, L2FWD, "entering main loop produce on lcore %u\n", lcore_id);
 
 	uint8_t *adcnt = NULL;
 	int packet_num_threw_in_ring = 0;
@@ -409,65 +439,86 @@ l2fwd_main_p(void)
 	}
 	printf("入列的包个数%d\n", packet_num_threw_in_ring);
 }
+
 static void
 l2fwd_main_c(void)
-{
+{	
 	void *d = NULL;
 	void **e = &d;
 	unsigned lcore_id;
 	uint8_t *adcnt = NULL;
 
+	// 内存缓冲相关初始化
+
+	int indx_buffer = 0;
+
 	lcore_id = rte_lcore_id();
-	RTE_LOG(INFO, L2FWD, "entering main loop consume on core %u\n", lcore_id);
+	RTE_LOG(INFO, L2FWD, "entering main loop consume on lcore %u\n", lcore_id);
 
 	info_pkg_head_t h_t, ph_t;
 	info_pkg_head_t *h = &h_t;
 	info_pkg_head_t *ph = &ph_t;
 	init_pre_info_pkg_head(ph);
 
-	int err = 0;
+	int16_t pre_idx[256];
+	memset(pre_idx, 0, sizeof(int16_t) * 256);
 
-	while (!force_quit)
+	sem_wait(&sem_rw);
+	while ((!force_quit) && (read_write_state == 1))
 	{
-		if (rte_ring_mc_dequeue(ring_recieve, e) < 0)
-			;
-		//printf("!\n");
-		else
+		// if (rte_ring_mc_dequeue(ring_recieve, e) < 0)
+		// 	;
+		// //printf("!\n");
+		// else
+		// {
+		// adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
+		// adcnt += 42;
+		adcnt = buffer[indx_buffer];
+		indx_buffer++;
+		if (indx_buffer >= SIZE_OF_BUFFER)
 		{
-			adcnt = rte_pktmbuf_mtod(*(struct rte_mbuf **)e, uint8_t *);
-			adcnt += 38;
-			// data_lesngth = ((*adcnt) << 8) + (*(adcnt + 1)) - 8;
-			adcnt += 4;
+			indx_buffer = 0;
+			read_write_state = 2;
+		}
 
-			send_en = *(adcnt);
-			h->data_vld = *(adcnt + 1);
-			if (h->data_vld)
+		send_en = *(adcnt);
+		h->data_vld = *(adcnt + 1);
+		if (h->data_vld == 0x01)
+		{
+			h->pack_type = *(adcnt + 2);
+			h->pack_hd = ((*(adcnt + 3)) << 8) + (*(adcnt + 4));
+			h->pack_idx = ((*(adcnt + 5)) << 8) + (*(adcnt + 6));
+			h->pack_len = ((*(adcnt + 7)) << 8) + (*(adcnt + 8));
+			adcnt += 16;
+			// if (check_info_pkg_head(h, ph))
+			if (h->pack_hd == 0x0B0E || h->pack_idx == pre_idx[h->pack_type])
 			{
-				h->pack_type = *(adcnt + 2);
-				h->pack_hd = ((*(adcnt + 3)) << 8) + (*(adcnt + 4));
-				h->pack_idx = ((*(adcnt + 5)) << 8) + (*(adcnt + 6));
-				h->pack_len = ((*(adcnt + 7)) << 8) + (*(adcnt + 8));
-				adcnt += 16;
-				if (check_info_pkg_head(h, ph))
+				if (h->pack_hd == 0x0B0E)
 				{
-					if (h->pack_hd == 0x0B0E)
-						correct_BE++;
-					if (h->pack_hd == 0x0E0D)
-						correct_ED++;
-					write_data_pkg(h, adcnt);
+					correct_BE++;
+					pre_idx[h->pack_type] = 0x0001;
 				}
-
+				else if (h->pack_hd == 0x0E0D)
+				{
+					correct_ED++;
+					pre_idx[h->pack_type] = 0x0000;
+				}
 				else
-				{
-					num_err_pkg++;
-					// print_mbuf_recieve(*(struct rte_mbuf **)e);
-				}
+					pre_idx[h->pack_type]++;
+
+				write_data_pkg(h, adcnt);
 			}
 			else
-				num_data_nvld++;
-
-			rte_pktmbuf_free(*(struct rte_mbuf **)e);
+			{
+				num_err_pkg++;
+				// print_mbuf_recieve(*(struct rte_mbuf **)e);
+			}
 		}
+		else
+			num_data_nvld++;
+
+		rte_pktmbuf_free(*(struct rte_mbuf **)e);
+		// }
 	}
 }
 static int
@@ -691,12 +742,13 @@ int main(int argc, char **argv)
 	check_all_ports_link_status(1, 0x1);
 
 	ret = 0;
+	sem_init(&sem_rw, 0, 0);
 	/* launch tasks on lcore */
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_c, NULL, 1);
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_recieve, NULL, 2);
-	sleep(10);
+	// sleep(10);
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_p, NULL, 3);
-	sleep(3);
+	sleep(1);
 	rte_eal_remote_launch(l2fwd_launch_one_lcore_send, NULL, 4);
 
 	RTE_LCORE_FOREACH_SLAVE(lcore_id)
