@@ -1,0 +1,40 @@
+latexindent.exe version 3.0.2, a script to indent .tex files
+	latexindent.exe lives here: C:/texlive/2017/bin/win32/
+	Thu Jul 19 12:58:22 2018
+Processing switches
+Directory for backup files and indent.log: d:\Github\DataProcess-Server-\report\20180719
+YAML settings read
+	Reading defaultSettings.yaml from C:/texlive/2017/bin/win32/defaultSettings.yaml
+	Reading defaultSettings.yaml (2nd attempt, TeXLive, Windows) from C:/texlive/2017/bin/win32/../../texmf-dist/scripts/latexindent/defaultSettings.yaml
+	Home directory is C:\Users\SherlockHsu (didn't find either indentconfig.yaml or .indentconfig.yaml)
+	To specify user settings you would put indentconfig.yaml here: C:\Users\SherlockHsu/indentconfig.yaml
+	Alternatively, you can use the hidden file .indentconfig.yaml as: C:\Users\SherlockHsu/.indentconfig.yaml
+List of items: item|myitem (see itemNames)
+looking for VERBATIM commands (see verbatimCommands)
+looking for FILE CONTENTS environments (see fileContentsEnvironments)
+	looking for filecontents:1 environments
+	looking for filecontents*:1 environments
+	\begin{document} found in body (after searching for filecontents)-- assuming that a preamble exists
+	Custom replacement text routine for preamble preamble
+	preamble found: LatexIndent::Preamble=HASH(0x3e7083c)
+	replaced with ID: LTXIN-TK-preamble1-END
+	\begin{document}
+	NOT storing LTXIN-TK-preamble1-END for indentation -- will store as VERBATIM object (see indentPreamble)
+Phase 1: searching for objects
+	looking for ENVIRONMENTS
+	looking for IFELSEFI
+	looking for HEADINGS (chapter, section, part, etc)
+	looking for COMMANDS and key = {value}
+	looking for SPECIAL begin/end
+Objects have been found.
+Operating on: masterdocument
+Number of children:
+	7
+Phase 2: finding surrounding indentation
+Phase 3: indenting objects
+Phase 4: final indentation check
+Output routine
+	Not outputting to file; see -w and -o switches for more options.
+--------------
+Please direct all communication/issues to: 
+	https://github.com/cmhughes/latexindent.pl
