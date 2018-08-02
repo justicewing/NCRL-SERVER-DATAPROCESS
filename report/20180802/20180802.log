@@ -1,10 +1,10 @@
-This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  30 JUL 2018 09:48
+This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  2 AUG 2018 13:43
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**d:/Github/DataProcess-Server-/report/20180730/20180730.tex
-(d:/Github/DataProcess-Server-/report/20180730/20180730.tex
+**d:/Github/DataProcess-Server-/report/20180802/20180802.tex
+(d:/Github/DataProcess-Server-/report/20180802/20180802.tex
 LaTeX2e <2017-04-15>
 Babel <3.10> and hyphenation patterns for 84 language(s) loaded.
 (c:/texlive/2017/texmf-dist/tex/latex/base/article.cls
@@ -1342,8 +1342,8 @@ Package: xeCJK-listings 2017/05/15 v3.4.8 xeCJK patch file for listings
 \l__xeCJK_listings_max_char_int=\count173
 \l__xeCJK_listings_flag_int=\count174
 )
-(./20180730.aux)
-\openout1 = `20180730.aux'.
+(./20180802.aux)
+\openout1 = `20180802.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 54.
 LaTeX Font Info:    ... okay on input line 54.
@@ -1472,34 +1472,6 @@ LaTeX Font Info:    Try loading font information for U+msb on input line 57.
 (c:/texlive/2017/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-File: SIMD_Execution_Model.png Graphic file (type QTm)
-
-<use  "SIMD_Execution_Model.png" >
-File: Asymmetric_Processing_in_ADDSUBPD.png Graphic file (type QTm)
-
-<use  "Asymmetric_Processing_in_ADDSUBPD.png" >
-File: Horizontal_Data_Movement_in_HADDPD.png Graphic file (type QTm)
-
-<use  "Horizontal_Data_Movement_in_HADDPD.png" > [1
-
-]
-File: SSE_Execution_Environment.png Graphic file (type QTm)
-
-<use  "SSE_Execution_Environment.png" >
-File: Data_Types_Introduced_with_the_SSE2_Extensions.png Graphic file (type QTm
-)
-
-<use  "Data_Types_Introduced_with_the_SSE2_Extensions.png" >
-File: ZMM.png Graphic file (type QTm)
- <use  "ZMM.png" >
-File: MXCSR.png Graphic file (type QTm)
-
-<use  "MXCSR.png" > [2]
-File: General-Purpose_Register.png Graphic file (type QTm)
- <use  "General-Purpose_Register.png" >
-File: EFLAG.png Graphic file (type QTm)
-
-<use  "EFLAG.png" > [3]
 (c:/texlive/2017/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2015/06/04 1.6 listings language file
 )
@@ -1537,15 +1509,20 @@ File: lstmisc.sty 2015/06/04 1.6 (Carsten Heinz)
 . <->"FangSong/OT:script=hani;language=DFLT;"
 . - 'small caps'  (m/sc) with NFSS spec.: 
 .................................................
- [4] [5]
-(./20180730.aux) ) 
-Here is how much of TeX's memory you used:
- 22356 strings out of 493005
- 438042 string characters out of 6137956
- 559279 words of memory out of 5000000
- 26071 multiletter control sequences out of 15000+600000
- 11446 words of font info for 72 fonts, out of 8000000 for 9000
- 1348 hyphenation exceptions out of 8191
- 57i,8n,68p,10505b,1658s stack positions out of 5000i,500n,10000p,200000b,80000s
+File: fig_r12_K8448L.eps Graphic file (type eps)
 
-Output written on 20180730.pdf (5 pages).
+<fig_r12_K8448L.eps> [1
+
+]
+File: fig_r12_K8448LImax.eps Graphic file (type eps)
+ <fig_r12_K8448LImax.eps> [2] [3] (./20180802.aux) ) 
+Here is how much of TeX's memory you used:
+ 22325 strings out of 493005
+ 437385 string characters out of 6137956
+ 556657 words of memory out of 5000000
+ 26049 multiletter control sequences out of 15000+600000
+ 11438 words of font info for 71 fonts, out of 8000000 for 9000
+ 1348 hyphenation exceptions out of 8191
+ 57i,8n,68p,10505b,1077s stack positions out of 5000i,500n,10000p,200000b,80000s
+
+Output written on 20180802.pdf (3 pages).
