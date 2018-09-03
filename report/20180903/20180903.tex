@@ -110,7 +110,7 @@ uchar_transpose_avx(tabO, h->llr_avx2, Nd);
 \subsection{遇到的问题}
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .7\textwidth]{packs.pdf}
+	\includegraphics[width = .8\textwidth]{packs.pdf}
 	\caption{packs相关指令的过程}
 \end{figure}
 \begin{figure}[H]
@@ -124,7 +124,7 @@ uchar_transpose_avx(tabO, h->llr_avx2, Nd);
 \subsection{遇到的问题}
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .8\textwidth]{err.png}
+	\includegraphics[width = \textwidth]{err.png}
 	\caption{段错误}
 \end{figure}
 错误原因：\\
@@ -132,6 +132,12 @@ uchar_transpose_avx(tabO, h->llr_avx2, Nd);
 解决方法：\\
 使用\_mm\_malloc函数分配寄存器相关地址空间；\\
 使用\_mm\_free释放相关地址空间。
+\subsection{编写makefile}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{makefile.png}
+	\caption{makefile}
+\end{figure}
 
 %===========第三节=================
 \section{Linux平台上的性能测试}
@@ -144,6 +150,11 @@ uchar_transpose_avx(tabO, h->llr_avx2, Nd);
 	\centering
 	\includegraphics[width = .8\textwidth]{resl.png}
 	\caption{本地运行结果}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{vtuneo.png}
+	\caption{服务器VTune测试结果（错误）}
 \end{figure}
 \begin{figure}[H]
 	\centering
@@ -166,7 +177,11 @@ uchar_transpose_avx(tabO, h->llr_avx2, Nd);
 
 %===========第四节=================
 \section{仍存在的问题}
-
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .8\textwidth]{ierr.png}
+	\caption{更新gcc的服务器上遇到的icc编译错误问题}
+\end{figure}
 
 %===========下周计划=================
 % \section{下阶段计划}
