@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  12 SEP 2018 21:46
+This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  13 SEP 2018 11:12
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1342,7 +1342,7 @@ Package: xeCJK-listings 2017/05/15 v3.4.8 xeCJK patch file for listings
 \l__xeCJK_listings_max_char_int=\count173
 \l__xeCJK_listings_flag_int=\count174
 )
-No file 20180913.aux.
+(./20180913.aux)
 \openout1 = `20180913.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 54.
@@ -1363,7 +1363,7 @@ LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 54.
 LaTeX Font Info:    ... okay on input line 54.
 LaTeX Font Info:    Checking defaults for T3/cmr/m/n on input line 54.
 LaTeX Font Info:    Try loading font information for T3+cmr on input line 54.
-(c:/texlive/2017/texmf-dist/tex/latex/tipa/t3cmr.fd
+ (c:/texlive/2017/texmf-dist/tex/latex/tipa/t3cmr.fd
 File: t3cmr.fd 2001/12/31 TIPA font definitions
 )
 LaTeX Font Info:    ... okay on input line 54.
@@ -1490,14 +1490,25 @@ File: lowrate.png Graphic file (type QTm)
  <use  "lowrate.png" >
 File: lowres.png Graphic file (type QTm)
  <use  "lowres.png" > [3]
-[4] (./20180913.aux) ) 
-Here is how much of TeX's memory you used:
- 22104 strings out of 493005
- 434627 string characters out of 6137956
- 465872 words of memory out of 5000000
- 25846 multiletter control sequences out of 15000+600000
- 8567 words of font info for 55 fonts, out of 8000000 for 9000
- 1348 hyphenation exceptions out of 8191
- 57i,6n,68p,10505b,270s stack positions out of 5000i,500n,10000p,200000b,80000s
+File: al.png Graphic file (type QTm)
 
-Output written on 20180913.pdf (4 pages).
+<use  "al.png" > [4]
+File: zc.png Graphic file (type QTm)
+ <use  "zc.png" > [5]
+File: vn.png Graphic file (type QTm)
+ <use  "vn.png" >
+Underfull \hbox (badness 10000) in paragraph at lines 130--136
+
+ []
+
+[6] (./20180913.aux) ) 
+Here is how much of TeX's memory you used:
+ 22142 strings out of 493005
+ 435725 string characters out of 6137956
+ 465872 words of memory out of 5000000
+ 25873 multiletter control sequences out of 15000+600000
+ 11422 words of font info for 69 fonts, out of 8000000 for 9000
+ 1348 hyphenation exceptions out of 8191
+ 57i,7n,68p,10505b,270s stack positions out of 5000i,500n,10000p,200000b,80000s
+
+Output written on 20180913.pdf (6 pages).

@@ -113,8 +113,27 @@
 
 %===========第三节=================
 \section{学习LDPC低时延译码方案}
-
-
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .8\textwidth]{al.png}
+	\caption{原算法}
+\end{figure}
+两个问题：\\
+1. the processor has Q SIMD processing units whereas QC-LDPC 
+code has a Z CN structure organization;\\
+若$Q=32,Z=42$,则利用率为$42/64$。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .6\textwidth]{zc.png}
+	\caption{5GNRZc取值}
+\end{figure}
+2. SIMD logical rotate feature and scatter \& gather memory 
+operations are unavailable to access to the Z VN elements.\\
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = .8\textwidth]{vn.png}
+	\caption{VN接入方式($Z_c=42,Q=32$)}
+\end{figure}
 
 %===========第四节=================
 % \section{仍存在的问题}
