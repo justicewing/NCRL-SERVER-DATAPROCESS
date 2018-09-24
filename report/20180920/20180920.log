@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  19 SEP 2018 14:07
+This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  20 SEP 2018 13:43
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1430,29 +1430,31 @@ File: res5ram.png Graphic file (type QTm)
  <use  "res5ram.png" > [1
 
 ]
+File: data.png Graphic file (type QTm)
+ <use  "data.png" > [2]
 File: vn.png Graphic file (type QTm)
  <use  "vn.png" >
 File: masktype.pdf Graphic file (type QTm)
- <use  "masktype.pdf" > [2] (c:/texlive/2017/texmf-dist/tex/latex/listings/lstlang1.sty
+ <use  "masktype.pdf" > [3] (c:/texlive/2017/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2015/06/04 1.6 listings language file
 ) (c:/texlive/2017/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2015/06/04 1.6 listings language file
 ) (c:/texlive/2017/texmf-dist/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2015/06/04 1.6 (Carsten Heinz)
-) [3]
+) [4]
 File: maskload256.png Graphic file (type QTm)
  <use  "maskload256.png" >
 File: maskload512.png Graphic file (type QTm)
- <use  "maskload512.png" > [4] [5]
+ <use  "maskload512.png" > [5] [6]
 File: llres.png Graphic file (type QTm)
- <use  "llres.png" > [6] [7] (./20180920.aux) ) 
+ <use  "llres.png" > [7] [8] (./20180920.aux) ) 
 Here is how much of TeX's memory you used:
- 22420 strings out of 493005
- 439699 string characters out of 6137956
- 583644 words of memory out of 5000000
- 26135 multiletter control sequences out of 15000+600000
+ 22422 strings out of 493005
+ 439715 string characters out of 6137956
+ 583669 words of memory out of 5000000
+ 26136 multiletter control sequences out of 15000+600000
  11462 words of font info for 74 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 57i,8n,68p,10505b,1554s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 57i,8n,68p,10504b,1554s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on 20180920.pdf (7 pages).
+Output written on 20180920.pdf (8 pages).
