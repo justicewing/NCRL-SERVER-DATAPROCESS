@@ -1,10 +1,10 @@
-This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  15 OCT 2018 10:29
+This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  15 OCT 2018 15:56
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**d:/Github/DataProcess-Server-/report/20181015/20181015.tex
-(d:/Github/DataProcess-Server-/report/20181015/20181015.tex
+**d:/Github/DataProcess-Server-/report/20181018/20181018.tex
+(d:/Github/DataProcess-Server-/report/20181018/20181018.tex
 LaTeX2e <2017-04-15>
 Babel <3.10> and hyphenation patterns for 84 language(s) loaded.
 (c:/texlive/2017/texmf-dist/tex/latex/base/article.cls
@@ -1268,8 +1268,8 @@ Package: enumerate 2015/07/23 v3.00 enumerate extensions (DPC)
 Package: xeCJK-listings 2017/05/15 v3.4.8 xeCJK patch file for listings
 \l__xeCJK_listings_max_char_int=\count173
 \l__xeCJK_listings_flag_int=\count174
-) (./20181015.aux)
-\openout1 = `20181015.aux'.
+) (./20181018.aux)
+\openout1 = `20181018.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 54.
 LaTeX Font Info:    ... okay on input line 54.
@@ -1396,52 +1396,21 @@ LaTeX Font Info:    Try loading font information for U+msb on input line 57.
  (c:/texlive/2017/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-File: u2.eps Graphic file (type eps)
- <u2.eps>
-File: u3.eps Graphic file (type eps)
- <u3.eps>
-File: u4.eps Graphic file (type eps)
- <u4.eps> [1
+File: oldrst.png Graphic file (type QTm)
+ <use  "oldrst.png" >
+File: estn.png Graphic file (type QTm)
+ <use  "estn.png" >
+File: newrst.png Graphic file (type QTm)
+ <use  "newrst.png" > [1
 
-]
-File: res.png Graphic file (type QTm)
- <use  "res.png" > [2]
-\g__fontspec_family_FangSong_int=\count176
-.................................................
-. fontspec info: "no-font-shape"
-. 
-. Could not resolve font "FangSong/BI" (it probably doesn't exist).
-.................................................
-.................................................
-. fontspec info: "no-font-shape"
-. 
-. Could not resolve font "FangSong/B" (it probably doesn't exist).
-.................................................
-.................................................
-. fontspec info: "no-font-shape"
-. 
-. Could not resolve font "FangSong/I" (it probably doesn't exist).
-.................................................
-.................................................
-. fontspec info: "defining-font"
-. 
-. Font family 'FangSong(0)' created for font 'FangSong' with options
-. [Script={CJK}].
-.  
-.  This font family consists of the following NFSS series/shapes:
-.  
-. - 'normal' (m/n) with NFSS spec.:
-. <->"FangSong/OT:script=hani;language=DFLT;"
-. - 'small caps'  (m/sc) with NFSS spec.: 
-.................................................
- [3] (./20181015.aux) ) 
+] (./20181018.aux) ) 
 Here is how much of TeX's memory you used:
- 22154 strings out of 493005
- 436902 string characters out of 6137956
- 550872 words of memory out of 5000000
- 25887 multiletter control sequences out of 15000+600000
- 8591 words of font info for 58 fonts, out of 8000000 for 9000
+ 22083 strings out of 493005
+ 433743 string characters out of 6137956
+ 464872 words of memory out of 5000000
+ 25829 multiletter control sequences out of 15000+600000
+ 8551 words of font info for 53 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 57i,6n,68p,10504b,958s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 57i,6n,68p,10504b,270s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on 20181015.pdf (3 pages).
+Output written on 20181018.pdf (1 page).

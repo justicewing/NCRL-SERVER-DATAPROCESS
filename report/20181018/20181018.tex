@@ -60,58 +60,49 @@
 
 %===========第一节=================
 \section{工作内容}
-1. 对接收信号进行信号检测、解调、译码；
-
-2. 根据SVN目录结构修改makefile；
+1. 完成matlab链路测试；
 
 %===========第一节=================
-\section{解调译码结果}
-\subsection{解调结果}
+\section{matlab链路测试结果}
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .8\textwidth]{u2.eps}
-	\caption{解调后星座图（QPSK）}
+	\includegraphics[width = .6\textwidth]{oldrst.png}
+	\caption{原结果}
 \end{figure}
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .8\textwidth]{u3.eps}
-	\caption{解调后星座图（16QAM）}
+	\includegraphics[width = .8\textwidth]{estn.png}
+	\caption{估计噪声}
 \end{figure}
 \begin{figure}[H]
 	\centering
-	\includegraphics[width = .8\textwidth]{u4.eps}
-	\caption{解调后星座图（64QAM）}
-\end{figure}
-\subsection{译码结果}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width = .8\textwidth]{res.png}
-	\caption{译码结果}
+	\includegraphics[width = .6\textwidth]{newrst.png}
+	\caption{使用正确噪声后的结果}
 \end{figure}
 
 %===========第二节=================
-\section{根据SVN目录结构修改makefile}
-% \lstset{language=C++}
-\begin{lstlisting}
-SRCS = $(wildcard *.c ../../lib/fec/*.c)
-	#wildcard把 指定目录 ./ 和 ../lib 下的所有后缀是c的文件全部展开。
-OBJS = $(SRCS:.c = .o)    #OBJS将$(SRCS)下的.c文件转化为.o文件
-CC = icc   #代表所使用的编译器
-INCLUDES = -I../../include   #头文件查找路径
-LIBS = -lm -lpthread -lmkl_rt -fopenmp   #链接库查找地址
-CCFLAGS = -Wall -O3 -march=core-avx2 -std=c99   #附加参数
-OUTPUT = main   #输出程序名称
+% \section{根据SVN目录结构修改makefile}
+% % \lstset{language=C++}
+% \begin{lstlisting}
+% SRCS = $(wildcard *.c ../../lib/fec/*.c)
+% 	#wildcard把 指定目录 ./ 和 ../lib 下的所有后缀是c的文件全部展开。
+% OBJS = $(SRCS:.c = .o)    #OBJS将$(SRCS)下的.c文件转化为.o文件
+% CC = icc   #代表所使用的编译器
+% INCLUDES = -I../../include   #头文件查找路径
+% LIBS = -lm -lpthread -lmkl_rt -fopenmp   #链接库查找地址
+% CCFLAGS = -Wall -O3 -march=core-avx2 -std=c99   #附加参数
+% OUTPUT = main   #输出程序名称
 
-all:$(OUTPUT)
-$(OUTPUT) : $(OBJS)
-	$(CC) $^ -o $@ $(INCLUDES) $(LIBS) 
-%.o : %.c
-	$(CC) -c $< $(CCFLAGS)
+% all:$(OUTPUT)
+% $(OUTPUT) : $(OBJS)
+% 	$(CC) $^ -o $@ $(INCLUDES) $(LIBS) 
+% %.o : %.c
+% 	$(CC) -c $< $(CCFLAGS)
 
-clean:
-	rm -rf main *.o *.txt    #清除中间文件及生成文件
-.PHONY:clean	
-\end{lstlisting}
+% clean:
+% 	rm -rf main *.o *.txt    #清除中间文件及生成文件
+% .PHONY:clean	
+% \end{lstlisting}
 
 %===========第三节=================
 % \section{根据PRACH测时延}
@@ -122,8 +113,8 @@ clean:
 % \end{figure}
 
 %===========第四节=================
-\section{后续工作}
-1. 实现当前SVN目录结构下基于LDPC的单线程编码调制链路；
+% \section{后续工作}
+% 1. 实现当前SVN目录结构下基于LDPC的单线程编码调制链路；
 
 %===========下周计划=================
 % \section{下阶段计划}
