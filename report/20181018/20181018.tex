@@ -62,6 +62,8 @@
 \section{工作内容} 
 1. 完成matlab链路测试；
 
+2. 实现系统发送端5G编码调制链路。
+
 %===========第一节=================
 \section{matlab链路测试结果}
 \begin{figure}[H]
@@ -81,28 +83,50 @@
 \end{figure}
 
 %===========第二节=================
-% \section{根据SVN目录结构修改makefile}
-% % \lstset{language=C++}
-% \begin{lstlisting}
-% SRCS = $(wildcard *.c ../../lib/fec/*.c)
-% 	#wildcard把 指定目录 ./ 和 ../lib 下的所有后缀是c的文件全部展开。
-% OBJS = $(SRCS:.c = .o)    #OBJS将$(SRCS)下的.c文件转化为.o文件
-% CC = icc   #代表所使用的编译器
-% INCLUDES = -I../../include   #头文件查找路径
-% LIBS = -lm -lpthread -lmkl_rt -fopenmp   #链接库查找地址
-% CCFLAGS = -Wall -O3 -march=core-avx2 -std=c99   #附加参数
-% OUTPUT = main   #输出程序名称
+\section{实现系统发送端5G编码调制链路}
+\subsection{关于分流的系统改进}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{txstrulte.png}
+	\caption{原系统}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{txstru5g.pdf}
+	\caption{改进后系统}
+\end{figure}
+\subsection{关于初始化的代码修改}
+\subsubsection{原LDPC部分代码结构}
+\lstset{language=C++}
+\begin{lstlisting}
+…………
+for(i = 0; i < LoopNum; i++)
+{
+	init_ldpc_param(ldpc_t, B, R);	// 初始化ldpc参数（包括空间分配）
+	…………
+	free_ldpc_t(ldpc_t);
+}
+…………
+\end{lstlisting}
+\subsubsection{先LDPC部分代码结构}
+——对LDPC编译码空间分配与码长、码率解耦合
+\lstset{language=C++}
+\begin{lstlisting}
+…………
+init_ldpc_encoder_mem(ldpc_t);		// 编码相关空间分配(最大)
+init_ldpc_decoder_mem(ldpc_t);		// 译码相关空间分配(最大)
 
-% all:$(OUTPUT)
-% $(OUTPUT) : $(OBJS)
-% 	$(CC) $^ -o $@ $(INCLUDES) $(LIBS) 
-% %.o : %.c
-% 	$(CC) -c $< $(CCFLAGS)
+for(i = 0; i < LoopNum; i++)
+{
+	init_ldpc_param(ldpc_t, B, R);	// 初始化ldpc参数（不包括空间分配）
 
-% clean:
-% 	rm -rf main *.o *.txt    #清除中间文件及生成文件
-% .PHONY:clean	
-% \end{lstlisting}
+	…………
+}
+
+free_ldpc_encoder_mem(ldpc_t);		// 编码相关空间释放
+free_ldpc_decoder_mem(ldpc_t);		// 译码相关空间释放
+…………
+\end{lstlisting}
 
 %===========第三节=================
 % \section{根据PRACH测时延}
@@ -117,8 +141,8 @@
 % 1. 实现当前SVN目录结构下基于LDPC的单线程编码调制链路；
 
 %===========下周计划=================
-% \section{下阶段计划}
-% 1. 继续完成仿真报告
+\section{下阶段计划}
+1. 实现接收端5G解调译码链路
 
 \end{document}
 %%%%%%%%%%%%%%%%%%%%%%%这是正文部分的结束%%%%%%%%%%%%
