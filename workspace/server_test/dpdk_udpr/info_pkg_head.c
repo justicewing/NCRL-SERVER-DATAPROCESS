@@ -165,12 +165,13 @@ void write_data_pkg(info_pkg_head_t *h, uint8_t *adcnt)
 void wirte_data(FILE *fp, info_pkg_head_t *h, uint8_t *adcnt)
 {
     uint8_t *p = adcnt;
+    int i;
     fprintf(fp, "pack_type:%02X\t", h->pack_type);
     fprintf(fp, "pack_hd:%04X\t", h->pack_hd);
     fprintf(fp, "pack_idx:%04X\t",h->pack_idx);
     fprintf(fp, "pack_len:%04X\t",h->pack_len);
     fprintf(fp, "\n");
-    for (int i = 0; i < h->pack_len; i++)
+    for (i = 0; i < h->pack_len; i++)
         fprintf(fp, "%02X ", *(p++));
     fprintf(fp, "\n");
     if (h->pack_hd == 0x0E0D)
