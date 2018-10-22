@@ -227,8 +227,8 @@ int package(mac_hdr *mhdr, ip_hdr *ihdr,
 
 	load_info_pkg_head_dl(h, adcnt);
 	adcnt += 16;
-
-	for (int i = 0; i < h->pack_len; i++)
+	int i;
+	for (i = 0; i < h->pack_len; i++)
 	{
 		*adcnt = data[i];
 		*adcnt++;
@@ -273,7 +273,6 @@ static int l2fwd_main_loop_send(void)
 		RTE_LOG(INFO, L2FWD, " -- lcoreid=%u portid=%u\n", lcore_id,
 				portid);
 	}
-
 	while (!force_quit)
 	{
 
@@ -288,7 +287,7 @@ static int l2fwd_main_loop_send(void)
 			portid = 0;
 			buffer = tx_buffer[portid];
 
-			for (int j = 0; j < 4; j++)
+			for (j = 0; j < 4; j++)
 				if (rte_ring_mc_dequeue(ring_send, e) < 0)
 					;
 				else
@@ -347,7 +346,8 @@ l2fwd_main_loop_recieve(void)
 	int indx_buffer = 0;
 	buffer = (uint8_t **)malloc(sizeof(uint8_t *) * SIZE_OF_BUFFER);
 	buffer[0] = (uint8_t *)malloc(sizeof(uint8_t) * SIZE_OF_BUFFER * PKG_LEN);
-	for (int i = 1; i < SIZE_OF_BUFFER; i++)
+	int i, j;
+	for (i = 1; i < SIZE_OF_BUFFER; i++)
 		buffer[i] = buffer[i - 1] + PKG_LEN;	
 
 	lcore_id = rte_lcore_id();
@@ -361,7 +361,7 @@ l2fwd_main_loop_recieve(void)
 		port_statistics[portid].rx += nb_rx;
 
 		// if (package_recieved < 400)
-		for (int j = 0; j < nb_rx; j++)
+		for (j = 0; j < nb_rx; j++)
 		{
 			// print_mbuf_recieve(pkts_burst[j]);
 			// rte_ring_mp_enqueue(ring_recieve, pkts_burst[j]);
@@ -375,7 +375,7 @@ l2fwd_main_loop_recieve(void)
 				indx_buffer = 0;
 				read_write_state = 1;
 				sem_post(&sem_rw);
-				for (int i = j; i < nb_rx; i++)
+				for (i = j; i < nb_rx; i++)
 					rte_pktmbuf_free(pkts_burst[i]);
 				break;
 			}
@@ -415,8 +415,8 @@ l2fwd_main_p(void)
 
 	info_pkg_head_t h;
 	init_dl_info_pkg_head(&h);
-
-	for (int i = 0; i < MAX_PKG_LEN; i++)
+	int i;
+	for (i = 0; i < MAX_PKG_LEN; i++)
 		data_to_be_sent[i] = 0xFF;
 
 	while (!force_quit)
