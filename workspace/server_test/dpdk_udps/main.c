@@ -270,7 +270,6 @@ static int l2fwd_main_loop_send(void)
 		RTE_LOG(INFO, L2FWD, " -- lcoreid=%u portid=%u\n", lcore_id,
 				portid);
 	}
-	int j;
 	while (!force_quit)
 	{
 

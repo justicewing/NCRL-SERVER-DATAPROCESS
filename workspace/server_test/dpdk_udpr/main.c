@@ -46,7 +46,7 @@
 
 static volatile bool force_quit;
 
-#define PKG_LEN (MAX_PKG_LEN + INFO_PKG_HEAD_LEN)
+#define PKG_LEN (MAX_PKG_LEN + MAC_HEAD_LEN + UDP_HEAD_LEN + IP_HEAD_LEN + INFO_PKG_HEAD_LEN)
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
@@ -348,7 +348,7 @@ l2fwd_main_loop_recieve(void)
 	buffer[0] = (uint8_t *)malloc(sizeof(uint8_t) * SIZE_OF_BUFFER * PKG_LEN);
 	int i, j;
 	for (i = 1; i < SIZE_OF_BUFFER; i++)
-		buffer[i] = buffer[i - 1] + PKG_LEN;	
+		buffer[i] = buffer[i - 1] + PKG_LEN;
 
 	lcore_id = rte_lcore_id();
 	RTE_LOG(INFO, L2FWD, "entering main loop recieve on lcore %u\n", lcore_id);
@@ -442,7 +442,7 @@ l2fwd_main_p(void)
 
 static void
 l2fwd_main_c(void)
-{	
+{
 	void *d = NULL;
 	void **e = &d;
 	unsigned lcore_id;
