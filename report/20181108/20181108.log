@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  5 NOV 2018 22:15
+This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  8 NOV 2018 13:51
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1268,8 +1268,7 @@ Package: enumerate 2015/07/23 v3.00 enumerate extensions (DPC)
 Package: xeCJK-listings 2017/05/15 v3.4.8 xeCJK patch file for listings
 \l__xeCJK_listings_max_char_int=\count173
 \l__xeCJK_listings_flag_int=\count174
-)
-No file 20181108.aux.
+) (./20181108.aux)
 \openout1 = `20181108.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 54.
@@ -1290,7 +1289,7 @@ LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 54.
 LaTeX Font Info:    ... okay on input line 54.
 LaTeX Font Info:    Checking defaults for T3/cmr/m/n on input line 54.
 LaTeX Font Info:    Try loading font information for T3+cmr on input line 54.
-(c:/texlive/2017/texmf-dist/tex/latex/tipa/t3cmr.fd
+ (c:/texlive/2017/texmf-dist/tex/latex/tipa/t3cmr.fd
 File: t3cmr.fd 2001/12/31 TIPA font definitions
 )
 LaTeX Font Info:    ... okay on input line 54.
@@ -1396,16 +1395,58 @@ File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 LaTeX Font Info:    Try loading font information for U+msb on input line 57.
  (c:/texlive/2017/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-) [1
+) (c:/texlive/2017/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2015/06/04 1.6 listings language file
+) (c:/texlive/2017/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2015/06/04 1.6 listings language file
+) (c:/texlive/2017/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2015/06/04 1.6 (Carsten Heinz)
+)
+\g__fontspec_family_FangSong_int=\count176
+.................................................
+. fontspec info: "no-font-shape"
+. 
+. Could not resolve font "FangSong/BI" (it probably doesn't exist).
+.................................................
+.................................................
+. fontspec info: "no-font-shape"
+. 
+. Could not resolve font "FangSong/B" (it probably doesn't exist).
+.................................................
+.................................................
+. fontspec info: "no-font-shape"
+. 
+. Could not resolve font "FangSong/I" (it probably doesn't exist).
+.................................................
+.................................................
+. fontspec info: "defining-font"
+. 
+. Font family 'FangSong(0)' created for font 'FangSong' with options
+. [Script={CJK}].
+.  
+.  This font family consists of the following NFSS series/shapes:
+.  
+. - 'normal' (m/n) with NFSS spec.:
+. <->"FangSong/OT:script=hani;language=DFLT;"
+. - 'small caps'  (m/sc) with NFSS spec.: 
+.................................................
+File: lowdemap.png Graphic file (type QTm)
+ <use  "lowdemap.png" >
+File: fastmap.pdf Graphic file (type QTm)
+ <use  "fastmap.pdf" > [1
 
-] [2] (./20181108.aux) ) 
+] [2]
+File: switch_err.png Graphic file (type QTm)
+ <use  "switch_err.png" >
+File: switch.png Graphic file (type QTm)
+ <use  "switch.png" > [3] [4] (./20181108.aux) ) 
 Here is how much of TeX's memory you used:
- 22108 strings out of 493005
- 434843 string characters out of 6137956
- 474872 words of memory out of 5000000
- 25853 multiletter control sequences out of 15000+600000
- 11422 words of font info for 69 fonts, out of 8000000 for 9000
+ 22355 strings out of 493005
+ 438763 string characters out of 6137956
+ 542254 words of memory out of 5000000
+ 26076 multiletter control sequences out of 15000+600000
+ 11446 words of font info for 72 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 57i,10n,68p,10504b,270s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 57i,10n,68p,10504b,1071s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on 20181108.pdf (2 pages).
+Output written on 20181108.pdf (4 pages).
