@@ -64,6 +64,8 @@
 
 2. 学习线程绑定CPU；
 
+3. 编写多线程编码调制模块。
+
 %===========第二节=================
 \section{服务器环境配置信息}
 \lstset{language=C++}
@@ -79,9 +81,10 @@ DPDK:   18.05.1
 \section{线程绑定CPU}
 \subsection{CPU亲和度(affinity)}
 \subsubsection{基本概念}
-概念：是一种调度属性(scheduler property), 它可以将一个进程“绑定” 到一个或一组CPU上。
-在SMP(Symmetric Multi-Processing对称多处理)架构下，Linux调度器(scheduler)会根据
-CPU affinity的设置让指定的进程运行在“绑定”的CPU上,而不会在别的CPU上运行。
+亲和度(affinity)是一种调度属性(scheduler property), 它可以将一个进程“绑定” 
+到一个或一组CPU上。在SMP(Symmetric Multi-Processing对称多处理)架构下，
+Linux调度器(scheduler)会根据CPU affinity的设置让指定的进程运行在“绑定”的CPU上,
+而不会在别的CPU上运行。
 \subsubsection{表示方法}
 CPU affinity 使用位掩码(bitmask)表示, 每一位都表示一个CPU, 置1表示“绑定”。
 最低位表示第一个逻辑CPU, 最高位表示最后一个逻辑CPU。
@@ -112,7 +115,22 @@ SYNOPSIS
 \end{figure}
 
 %===========第四节=================
-% \section{测试通过交换机的DPDK传输}
+\section{编写多线程编码调制模块}
+\subsection{多线程结构}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{txstru.pdf}
+	\caption{Tx结构}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width = \textwidth]{rxstru.pdf}
+	\caption{Rx结构}
+\end{figure}
+\subsection{修改点}
+1. 信号量传递由全局变量改为线程传参；\\
+2. 轮巡式调度改为信号量调度; \\
+3. 尝试简化线程阶段。
 
 %===========第五节=================
 % \section{有PRACH情况下的资源分配问题}

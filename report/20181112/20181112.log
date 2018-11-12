@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  10 NOV 2018 15:03
+This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  12 NOV 2018 09:54
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1430,18 +1430,27 @@ File: lstmisc.sty 2015/06/04 1.6 (Carsten Heinz)
 . <->"FangSong/OT:script=hani;language=DFLT;"
 . - 'small caps'  (m/sc) with NFSS spec.: 
 .................................................
- [1
+
+Overfull \hbox (25.1779pt too wide) in paragraph at lines 84--88
+[]\TU/SimSun(0)/m/n/10.53937 亲 和 度 \TU/lmr/m/n/10.53937 (affinity) \TU/SimSun(0)/m/n/10.53937 是 一 种 调 度 属 性 \TU/lmr/m/n/10.53937 (scheduler property), \TU/SimSun(0)/m/n/10.53937 它 可 以 将 一 个 进 程  |“绑 定”| 到 一 个 或 一 组 \TU/lmr/m/n/10.53937 CPU \TU/SimSun(0)/m/n/10.53937 上。|  在 \TU/lmr/m/n/10.53937 SMP(Symmetric
+ []
+
+[1
 
 ]
 File: testCPU.png Graphic file (type QTm)
- <use  "testCPU.png" > [2] (./20181112.aux) ) 
+ <use  "testCPU.png" >
+File: txstru.pdf Graphic file (type QTm)
+ <use  "txstru.pdf" >
+File: rxstru.pdf Graphic file (type QTm)
+ <use  "rxstru.pdf" > [2] [3] (./20181112.aux) ) 
 Here is how much of TeX's memory you used:
- 22391 strings out of 493005
- 440967 string characters out of 6137956
- 524587 words of memory out of 5000000
- 26119 multiletter control sequences out of 15000+600000
+ 22385 strings out of 493005
+ 440340 string characters out of 6137956
+ 520727 words of memory out of 5000000
+ 26111 multiletter control sequences out of 15000+600000
  8599 words of font info for 59 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  57i,6n,68p,10504b,1560s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on 20181112.pdf (2 pages).
+Output written on 20181112.pdf (3 pages).
