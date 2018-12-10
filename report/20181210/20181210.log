@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  10 DEC 2018 00:52
+This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2017/W32TeX) (preloaded format=xelatex 2018.3.23)  10 DEC 2018 09:59
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1406,13 +1406,15 @@ File: cpu.png Graphic file (type QTm)
  <use  "cpu.png" >
 File: err.png Graphic file (type QTm)
  <use  "err.png" >
+File: reason0.png Graphic file (type QTm)
+ <use  "reason0.png" > [2]
 File: reason.png Graphic file (type QTm)
- <use  "reason.png" > [2] [3] (./20181210.aux) ) 
+ <use  "reason.png" > [3] (./20181210.aux) ) 
 Here is how much of TeX's memory you used:
- 22101 strings out of 493005
- 434567 string characters out of 6137956
+ 22103 strings out of 493005
+ 434589 string characters out of 6137956
  464872 words of memory out of 5000000
- 25844 multiletter control sequences out of 15000+600000
+ 25845 multiletter control sequences out of 15000+600000
  8567 words of font info for 55 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  57i,6n,68p,10504b,270s stack positions out of 5000i,500n,10000p,200000b,80000s
